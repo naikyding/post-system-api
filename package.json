@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "dev": "nodemon ./bin/www",
     "start": "node ./bin/www"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
   "devDependencies": {
     "eslint": "^8.40.0",
     "eslint-config-prettier": "^8.8.0",
+    "nodemon": "^2.0.22",
     "prettier": "^2.8.8"
   }
 }
