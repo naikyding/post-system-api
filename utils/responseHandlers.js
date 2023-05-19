@@ -1,4 +1,10 @@
-const successResponse = (req, res, next) => {}
+const successResponse = ({ res, status, statusCode, message, data }) => {
+  res.status(statusCode || 200).json({
+    status: status || true,
+    message: message || '操作成功',
+    data: data || {},
+  })
+}
 
 const errorResponse = ({ res, status, message, errors }) => {
   if (errors.status === 404) {
