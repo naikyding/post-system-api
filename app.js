@@ -43,4 +43,18 @@ app.use((errors, req, res, next) => {
   errorResponse({ res, errors })
 })
 
+process.on('uncaughtException', (error) => {
+  console.log('--------------- 未被補獲的錯誤 (start) -------------------')
+  console.error('未被補獲的錯誤 (uncaughtException):', error)
+  console.log('--------------- 未被補獲的錯誤 (end) -------------------')
+})
+
+process.on('unhandledRejection', (error) => {
+  console.log(
+    '--------------- reject 未被處錯的錯誤 (start) -------------------'
+  )
+  console.error('未被處錯的錯誤 (unhandledRejection):', error)
+  console.log('--------------- reject 未被處錯的錯誤 (end) -------------------')
+})
+
 module.exports = app
