@@ -44,7 +44,7 @@ app.use((errors, req, res, next) => {
   res.locals.message = errors.message
   res.locals.error = req.app.get('env') === 'development' ? errors : {}
   console.log('發生錯誤 (error handler)')
-  errorResponse({ res, errors })
+  errorResponse({ res, errors: errors.stack })
 })
 
 process.on('uncaughtException', (error) => {

@@ -4,6 +4,7 @@ const errorCallback = ({ errors, res }) => {
   console.log('----------- catchAsync Error -----------')
   console.log(errors)
   console.log('----------- catchAsync Error -----------')
+  console.log('errorCallback')
   if (res) errorResponse({ res, errors })
 }
 
@@ -13,7 +14,8 @@ const catchAsync =
     try {
       await func(req, res, next)
     } catch (errors) {
-      errorFunc({ errors, res })
+      console.log('catchAsync')
+      errorFunc({ req, res, next, errors })
     }
   }
 
