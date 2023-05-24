@@ -5,6 +5,9 @@ const cookieParser = require('cookie-parser')
 const logger = require('morgan')
 require('dotenv').config()
 
+const mongoDbConnect = require('./database/mongodb.database')
+mongoDbConnect()
+
 const { errorResponse } = require('./utils/responseHandlers')
 
 // cors
@@ -12,9 +15,6 @@ const cors = require('cors')
 
 const indexRouter = require('./routes/index')
 const v1Routes = require('./routes/v1')
-
-const dbConnection = require('./db/mongodb')
-dbConnection()
 
 const app = express()
 
