@@ -3,6 +3,7 @@ const express = require('express')
 const path = require('path')
 const cookieParser = require('cookie-parser')
 const logger = require('morgan')
+require('dotenv').config()
 
 const { errorResponse } = require('./utils/responseHandlers')
 
@@ -39,7 +40,7 @@ app.use((errors, req, res, next) => {
   // set locals, only providing error in development
   res.locals.message = errors.message
   res.locals.error = req.app.get('env') === 'development' ? errors : {}
-  console.log('error handler')
+  console.log('發生錯誤 (error handler)')
   errorResponse({ res, errors })
 })
 
