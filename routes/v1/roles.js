@@ -1,11 +1,15 @@
 const express = require('express')
 const router = express.Router()
 
-const { getRoles, postRole } = require('../../controllers/roles.controller')
+const {
+  getRoles,
+  postRole,
+  validation,
+} = require('../../controllers/roles.controller')
 
 router
   .get('/', getRoles)
-  .post('/', postRole)
+  .post('/', validation.post, postRole)
   .delete('/', () => {})
 
 module.exports = router
