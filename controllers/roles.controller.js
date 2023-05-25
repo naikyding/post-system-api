@@ -1,12 +1,21 @@
 const rolesModel = require('../models/roles.model')
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, validationResult, check } = require('express-validator')
+const { body } = require('express-validator')
 
 const validation = {
-  post: [
-    // name 不為空
-    body('name').notEmpty().withMessage('欄位 `name` 不可為空'),
+  postRole: [
+    body('name')
+      .exists()
+      .withMessage('欄位 `name` 必填')
+      .bail()
+      // 驗證不可為空
+      .notEmpty()
+      .withMessage('`name` 不可為空值')
+      .bail()
+      // 為字串格式
+      .isString()
+      .withMessage('`name` 必須為字串格式'),
   ],
 }
 
@@ -16,9 +25,6 @@ const getRoles = catchAsync(async (req, res) => {
 })
 
 const postRole = catchAsync(async (req, res, next) => {
-  const errors = validationResult(req).array()
-  if (errors.length > 0) console.log(errors)
-
   const createdRES = await rolesModel.create({
     name: req.body.name,
     description: req.body.description,

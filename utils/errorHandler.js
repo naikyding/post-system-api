@@ -1,5 +1,5 @@
 const { errorResponse } = require('../utils/responseHandlers')
-const { body, validationResult, check } = require('express-validator')
+const { validationResult } = require('express-validator')
 
 const errorCallback = ({ req, res, next, errors }) => {
   console.log('----------- 🚧 errorCallback 🚧 -----------')

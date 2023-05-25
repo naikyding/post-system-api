@@ -9,7 +9,7 @@ const {
 
 router
   .get('/', getRoles)
-  .post('/', validation.post, postRole)
+  .post('/', validation.postRole, postRole)
   .delete('/', () => {})
 
 module.exports = router
