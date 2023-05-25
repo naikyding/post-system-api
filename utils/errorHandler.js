@@ -7,11 +7,14 @@ const errorCallback = ({ req, res, next, errors }) => {
   console.log('----------- 🚧 errorCallback 🚧 -----------')
 
   // express-validator 驗證
-  const errorsValidate = validationResult(req).array()
+  const errorsValidate = validationResult(req)
+    // 指定回傳欄位
+    .formatWith((errors) => errors.msg)
+    .array()
   if (errorsValidate.length > 0)
     return errorResponse({ res, errors: errorsValidate, statusCode: 400 })
 
-  const errorsIsExist = errorDefault[errors.message]
+  const errorsIsExist = errorDefault[errors.name]
   if (res)
     errorResponse({
       res,
@@ -22,7 +25,7 @@ const errorCallback = ({ req, res, next, errors }) => {
 }
 
 const errorDefault = {
-  'Unexpected end of JSON input': '傳送格式錯誤',
+  SyntaxError: '格式錯誤',
 }
 
 module.exports = { errorCallback, errorDefault }
