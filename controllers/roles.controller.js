@@ -1,10 +1,13 @@
 const rolesModel = require('../models/roles.model')
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, validationResult } = require('express-validator')
+const { body, validationResult, check } = require('express-validator')
 
 const validation = {
-  post: [body('name').not().isEmpty().withMessage('name 不可為空')],
+  post: [
+    // name 不為空
+    body('name').notEmpty().withMessage('欄位 `name` 不可為空'),
+  ],
 }
 
 const getRoles = catchAsync(async (req, res) => {
@@ -12,28 +15,17 @@ const getRoles = catchAsync(async (req, res) => {
   successResponse({ res, data })
 })
 
-const postRole = catchAsync(
-  async (req, res) => {
-    const errors = validationResult(req).array()
+const postRole = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req).array()
+  if (errors.length > 0) console.log(errors)
 
-    const createdRES = await rolesModel.create({
-      name: req.body.name,
-      description: req.body.description,
-    })
+  const createdRES = await rolesModel.create({
+    name: req.body.name,
+    description: req.body.description,
+  })
 
-    res.send(createdRES)
-  },
-  ({ req, res, next, errors }) => {
-    const validateErrors = validationResult(req).array()
-
-    errorResponse({
-      res,
-      statusCode: 400,
-      errors: validateErrors,
-      message: '輸入格式錯誤',
-    })
-  }
-)
+  res.send(createdRES)
+})
 
 module.exports = {
   getRoles,

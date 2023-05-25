@@ -7,15 +7,18 @@ const successResponse = ({ res, status, statusCode, message, data }) => {
 }
 
 const errorResponse = ({ res, statusCode, status, message, errors }) => {
-  if (errors.status === 404) {
-    message = '不存在的路由!'
-    errors.stack = undefined
+  const defaultMessage = {
+    400: '操作失敗',
+    404: '路由不存在',
+    500: 'Something went wrong',
   }
+
+  const resMessage = message || defaultMessage[statusCode]
 
   res.status(statusCode || 500).json({
     status: status || false,
-    message: message || 'Something went wrong',
-    errors,
+    message: resMessage || 'Something went wrong',
+    errors: typeof errors === 'string' ? [errors] : errors,
   })
 }
 

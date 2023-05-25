@@ -1,12 +1,4 @@
-const { errorResponse } = require('../utils/responseHandlers')
-
-const errorCallback = ({ errors, res }) => {
-  console.log('----------- catchAsync Error -----------')
-  console.log(errors)
-  console.log('----------- catchAsync Error -----------')
-  console.log('errorCallback')
-  if (res) errorResponse({ res, errors })
-}
+const { errorCallback } = require('./errorHandler')
 
 const catchAsync =
   (func, errorFunc = errorCallback) =>

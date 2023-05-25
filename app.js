@@ -9,6 +9,8 @@ const mongoDbConnect = require('./database/mongodb.database')
 mongoDbConnect()
 
 const { errorResponse } = require('./utils/responseHandlers')
+const { errorCallback } = require('./utils/errorHandler')
+const catchAsync = require('./utils/catchAsync')
 
 // cors
 const cors = require('cors')
@@ -36,15 +38,17 @@ app.use('/', indexRouter)
 app.use('/v1', v1Routes)
 
 // catch 404 and forward to error handler
-app.use((req, res, next) => next(createError(404)))
+app.use((req, res, next) => errorResponse({ res, statusCode: 404 }))
 
 // error handler
 app.use((errors, req, res, next) => {
   // set locals, only providing error in development
   res.locals.message = errors.message
   res.locals.error = req.app.get('env') === 'development' ? errors : {}
-  console.log('發生錯誤 (error handler)')
-  errorResponse({ res, errors: errors.stack })
+  return errorCallback({ errors, res, req })
+  // console.log(errors.name)
+  // console.log(errors.message)
+  // console.log(errors.stack)
 })
 
 process.on('uncaughtException', (error) => {
