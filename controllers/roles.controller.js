@@ -25,6 +25,7 @@ const getRoles = catchAsync(async (req, res) => {
 })
 
 const postRole = catchAsync(async (req, res, next) => {
+  console.log('請求的 ip:', req.id)
   const createdRES = await rolesModel.create({
     name: req.body.name,
     description: req.body.description,
