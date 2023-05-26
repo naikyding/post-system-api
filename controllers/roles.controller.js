@@ -20,13 +20,11 @@ const validation = {
 }
 
 const getRoles = catchAsync(async (req, res) => {
-  console.log(req.id)
   const data = await rolesModel.find()
   successResponse({ res, data })
 })
 
 const postRole = catchAsync(async (req, res, next) => {
-  console.log(req.id)
   const createdRES = await rolesModel.create({
     name: req.body.name,
     description: req.body.description,
