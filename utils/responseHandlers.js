@@ -1,8 +1,10 @@
 const successResponse = ({ res, status, statusCode, message, data }) => {
+  const dataByArray = Array.isArray(data) ? data : [data]
+
   res.status(statusCode || 200).json({
     status: status || true,
     message: message || '操作成功',
-    data: data || {},
+    data: dataByArray || [],
   })
 }
 
