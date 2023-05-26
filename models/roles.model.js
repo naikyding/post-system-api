@@ -6,7 +6,7 @@ const roleSchema = new mongoose.Schema(
       type: String,
     },
     description: {
-      required: [true, '欄位 `description` 必填'],
+      // required: [true, '欄位 `description` 必填'],
       type: String,
     },
     menu: {
