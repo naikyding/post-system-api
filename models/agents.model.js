@@ -12,10 +12,29 @@ const agentSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: '',
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    // admin: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'User',
+    //   },
+    // ],
+    // editor: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'User',
+    //   },
+    // ],
+    // visitor: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'User',
+    //   },
+    // ],
   },
   {
     versionKey: false,
