@@ -13,6 +13,6 @@ const {
 
 router.get('/', getProducts)
 router.post('/', validation.createProduct, validateHandler, createProduct)
-router.delete('/', validation.deleteProduct, validateHandler, deleteProduct)
+router.delete('/:id', validation.deleteProduct, validateHandler, deleteProduct)
 
 module.exports = router
