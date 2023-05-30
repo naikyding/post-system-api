@@ -4,7 +4,7 @@ const { successResponse, errorResponse } = require('../utils/responseHandlers')
 const { body, validationResult } = require('express-validator')
 
 const validation = {
-  postRole: [
+  createRole: [
     body('name')
       .exists() // 欄位存在
       .withMessage('欄位 `name` 必填')
@@ -27,17 +27,16 @@ const getRoles = catchAsync(async (req, res) => {
   successResponse({ res, data })
 })
 
-const postRole = catchAsync(async (req, res, next) => {
+const createRole = catchAsync(async (req, res, next) => {
   const createdRes = await rolesModel.create({
     name: req.body.name,
     description: req.body.description,
   })
-  console.log('postRole')
   successResponse({ res, statusCode: 201, data: [createdRes] })
 })
 
 module.exports = {
   getRoles,
-  postRole,
+  createRole,
   validation,
 }

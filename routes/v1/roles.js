@@ -5,13 +5,13 @@ const validateHandler = require('../../utils/validateHandler')
 
 const {
   getRoles,
-  postRole,
+  createRole,
   validation,
 } = require('../../controllers/roles.controller')
 
 router
   .get('/', getRoles)
-  .post('/', validation.postRole, validateHandler, postRole)
+  .post('/', validation.createRole, validateHandler, createRole)
   .delete('/', () => {})
 
 module.exports = router
