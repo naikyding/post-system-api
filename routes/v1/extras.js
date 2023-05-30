@@ -7,12 +7,12 @@ const {
   validation,
 
   getExtras,
-  postExtras,
-  deleteExtras,
+  createExtra,
+  deleteExtra,
 } = require('../../controllers/extras.controller')
 
 router.get('/', getExtras)
-router.post('/', validation.postExtras, validateHandler, postExtras)
-router.delete('/', deleteExtras)
+router.post('/', validation.createExtra, validateHandler, createExtra)
+router.delete('/:id', validation.deleteExtra, validateHandler, deleteExtra)
 
 module.exports = router
