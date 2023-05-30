@@ -4,7 +4,7 @@ const { successResponse, errorResponse } = require('../utils/responseHandlers')
 const { body, param } = require('express-validator')
 
 const validation = {
-  postAgents: [
+  createAgent: [
     body('name')
       .exists() // 欄位存在
       .withMessage('欄位 `name` 必填')
@@ -20,7 +20,7 @@ const validation = {
         if (user) throw new Error('商家已存在')
       }),
   ],
-  deleteAgents: [
+  deleteAgent: [
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
@@ -37,7 +37,7 @@ const getAgents = catchAsync(async (req, res, next) => {
   successResponse({ res, data: agentsData })
 })
 
-const postAgents = catchAsync(async (req, res, next) => {
+const createAgent = catchAsync(async (req, res, next) => {
   const resData = await agentModel.create({
     name: req.body.name,
     description: req.body.description,
@@ -46,9 +46,7 @@ const postAgents = catchAsync(async (req, res, next) => {
   successResponse({ res, statusCode: 201, data: resData })
 })
 
-const deleteAgents = catchAsync(async (req, res, next) => {
-  console.log('deleteAgents')
-
+const deleteAgent = catchAsync(async (req, res, next) => {
   const agentsData = await agentModel.find()
   successResponse({ res, data: agentsData })
 })
@@ -57,6 +55,6 @@ module.exports = {
   validation,
 
   getAgents,
-  postAgents,
-  deleteAgents,
+  createAgent,
+  deleteAgent,
 }

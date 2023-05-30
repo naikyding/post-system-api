@@ -7,12 +7,12 @@ const {
   validation,
 
   getAgents,
-  postAgents,
-  deleteAgents,
+  createAgent,
+  deleteAgent,
 } = require('../../controllers/agents.controller')
 
 router.get('/', getAgents)
-router.post('/', validation.postAgents, validateHandler, postAgents)
-router.delete('/:id', validation.deleteAgents, validateHandler, deleteAgents)
+router.post('/', validation.createAgent, validateHandler, createAgent)
+router.delete('/:id', validation.deleteAgent, validateHandler, deleteAgent)
 
 module.exports = router
