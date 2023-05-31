@@ -13,7 +13,7 @@ const ordersSchema = mongoose.Schema({
         product: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Product',
-          required: [true, '欄位 `product` 必填'],
+          required: [true, '欄位 `items.product` 必填'],
         },
         extras: [
           {
@@ -21,6 +21,14 @@ const ordersSchema = mongoose.Schema({
             ref: 'Extra',
           },
         ],
+        quantify: {
+          type: Number,
+          required: [true, '欄位 `items.quantify` 必填'],
+        },
+        price: {
+          type: Number,
+          required: [true, '欄位 `items.price` 必填'],
+        },
       },
     ],
     default: [],
