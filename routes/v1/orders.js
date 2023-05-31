@@ -3,14 +3,12 @@ const router = express.Router()
 
 const {
   getOrderList,
-  addOrderList,
+  createOrder,
+  deleteOrder,
 } = require('../../controllers/orders.controller')
 
-router
-  .get('/', getOrderList)
-  .post('/', addOrderList)
-  .delete('/', (req, res) => {
-    res.send('DELETE order')
-  })
+router.get('/', getOrderList)
+router.post('/', createOrder)
+router.delete('/:id', deleteOrder)
 
 module.exports = router
