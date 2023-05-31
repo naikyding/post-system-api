@@ -1,6 +1,8 @@
 const catchAsync = require('../utils/catchAsync')
 
-const { body } = require('express-validator')
+const { body, param } = require('express-validator')
+const { successResponse, errorResponse } = require('../utils/responseHandlers')
+const customersModel = require('../models/customers.model')
 const agentsModel = require('../models/agents.model')
 
 const validation = {
@@ -33,7 +35,18 @@ const validation = {
       .withMessage('`email` 不可為空值')
       .bail()
       .isEmail()
-      .withMessage('`email` 格式錯誤'),
+      .withMessage('`email` 格式錯誤')
+      .bail()
+      .custom(async (email, { req }) => {
+        const matchItem = await customersModel.findOne({
+          email,
+          agents: {
+            $in: req.body.agent,
+          },
+        })
+        console.log(matchItem)
+        if (matchItem) throw new Error('相同 email 的帳號已存在')
+      }),
 
     body('phone')
       // 若有值才驗證
@@ -67,18 +80,57 @@ const validation = {
       .withMessage('密碼需要包含英文字母、數字和符號'),
   ],
 
-  deleteCustomer: [],
+  deleteCustomer: [
+    param('id')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `id`')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await customersModel.findByIdAndDelete(id)
+        if (!matchItem) throw new Error('`id` 不存在')
+      }),
+  ],
 }
 
 const getCustomers = catchAsync(async (req, res, next) => {
-  res.send('GET Customer')
+  const customersList = await customersModel.find()
+  successResponse({ res, data: customersList })
 })
+
 const createCustomer = catchAsync(async (req, res, next) => {
-  res.send(req.body)
+  const {
+    name,
+    nickname,
+    address,
+    gender,
+    googleId,
+    facebookId,
+    avatar,
+    email,
+    phone,
+    note,
+    password,
+    agent,
+  } = req.body
+
+  const createdItem = await customersModel.create({
+    name,
+    nickname,
+    address,
+    gender,
+    googleId,
+    facebookId,
+    avatar,
+    email,
+    phone,
+    note,
+    password,
+    agents: [agent],
+  })
+  res.send(createdItem)
 })
-const deleteCustomer = catchAsync(async (req, res, next) => {
-  res.send('DELETE Customer')
-})
+
+const deleteCustomer = catchAsync(getCustomers)
 
 module.exports = {
   validation,
