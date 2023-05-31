@@ -6,9 +6,9 @@ const customerSchema = mongoose.Schema(
       type: String,
       required: [true, '`name`必填'],
     },
-    description: {
+    nickname: {
       type: String,
-      required: [true, '`description`必填'],
+      default: '',
     },
     gender: {
       type: String,
