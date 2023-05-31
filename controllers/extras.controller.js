@@ -72,8 +72,9 @@ const validation = {
       .isNumeric() // 為數格式 "123" 會過
       .withMessage('`price` 必須為數字格式')
       .bail()
-      .equals(0)
-      .withMessage('`price 不可為 0'),
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`price` 不可為 0'),
   ],
   deleteExtra: [
     param('id')
