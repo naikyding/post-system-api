@@ -127,7 +127,7 @@ const createCustomer = catchAsync(async (req, res, next) => {
     password,
     agents: [agent],
   })
-  res.send(createdItem)
+  successResponse({ res, data: createdItem })
 })
 
 const deleteCustomer = catchAsync(getCustomers)
