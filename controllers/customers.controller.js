@@ -1,7 +1,8 @@
 const catchAsync = require('../utils/catchAsync')
-
 const { body, param } = require('express-validator')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
+const bcrypt = require('bcryptjs')
+
 const customersModel = require('../models/customers.model')
 const agentsModel = require('../models/agents.model')
 
@@ -124,7 +125,7 @@ const createCustomer = catchAsync(async (req, res, next) => {
     email,
     phone,
     note,
-    password,
+    password: bcrypt.hashSync(password, 12),
     agents: [agent],
   })
   successResponse({ res, data: createdItem })
