@@ -9,10 +9,17 @@ const {
   getOrderList,
   createOrder,
   deleteOrder,
+  deleteOrderItem,
 } = require('../../controllers/orders.controller')
 
 router.get('/', getOrderList)
 router.post('/', validation.createOrder, validateHandler, createOrder)
 router.delete('/:id', validation.deleteOrder, validateHandler, deleteOrder)
+router.delete(
+  '/item/:id',
+  validation.deleteOrderItem,
+  validateHandler,
+  deleteOrderItem
+)
 
 module.exports = router
