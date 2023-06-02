@@ -39,6 +39,7 @@ const validation = {
         if (errorsValidate.length < 1) {
           const user = await productsModel.findOne({
             name: value,
+            type: req.body.type,
             agents: {
               $in: [req.body.agent],
             },
@@ -114,8 +115,35 @@ const validation = {
 }
 
 const getProducts = catchAsync(async (req, res, next) => {
-  const allProducts = await productsModel.find()
-  successResponse({ res, data: allProducts })
+  let formatAllProducts
+
+  const allProducts = await productsModel
+    .find()
+    .select('-createdAt -updatedAt -agents') // 不顯示項目
+    // 依 id 填充內容
+    .populate({
+      path: 'extras',
+      select: '-createdAt -updatedAt -agents',
+    })
+
+  if (allProducts.length > 0) {
+    formatAllProducts = allProducts.reduce((acc, cur) => {
+      const matchTypeItem = acc.find((item) => item.type === cur.type)
+      if (matchTypeItem) {
+        matchTypeItem.items.push(cur)
+        return acc
+      }
+      return (acc = [
+        ...acc,
+        {
+          type: cur.type,
+          items: [cur],
+        },
+      ])
+    }, [])
+  }
+
+  successResponse({ res, data: formatAllProducts || allProducts })
 })
 
 const createProduct = catchAsync(async (req, res, next) => {
@@ -133,10 +161,7 @@ const createProduct = catchAsync(async (req, res, next) => {
   res.send(createItem)
 })
 
-const deleteProduct = catchAsync(async (req, res, next) => {
-  const productList = await productsModel.find()
-  successResponse({ res, data: productList })
-})
+const deleteProduct = getProducts
 
 module.exports = {
   validation,
