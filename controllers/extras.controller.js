@@ -37,6 +37,7 @@ const validation = {
         if (errorsValidate.length < 1) {
           const user = await extrasModel.findOne({
             name: value,
+            type: req.body.type,
             agents: {
               $in: [req.body.agent],
             },
