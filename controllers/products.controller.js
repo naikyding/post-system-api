@@ -125,9 +125,29 @@ const getProducts = catchAsync(async (req, res, next) => {
       path: 'extras',
       select: '-createdAt -updatedAt -agents',
     })
+    .lean() // 資訊不在擁有 mongoose 嵌入操作，為一般 js 物件
+  // const cloneProduct = JSON.parse(JSON.stringify(allProducts))
 
   if (allProducts.length > 0) {
     formatAllProducts = allProducts.reduce((acc, cur) => {
+      // product.extras type 相同整合
+      const formatExtras = cur.extras.reduce((extraAcc, extraCur) => {
+        const matchExtraAccTypeItem = extraAcc.find(
+          (accItem) => accItem.type === extraCur.type
+        )
+        if (matchExtraAccTypeItem) {
+          matchExtraAccTypeItem.items.push(extraCur)
+          return extraAcc
+        }
+        return (extraAcc = [
+          ...extraAcc,
+          { type: extraCur.type, items: [extraCur] },
+        ])
+      }, [])
+
+      cur.extras = formatExtras
+
+      // product  type 相同整合
       const matchTypeItem = acc.find((item) => item.type === cur.type)
       if (matchTypeItem) {
         matchTypeItem.items.push(cur)
