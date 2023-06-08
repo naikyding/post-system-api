@@ -63,6 +63,11 @@ const ordersSchema = mongoose.Schema(
       default: '',
     },
 
+    paymentType: {
+      type: String,
+      default: '',
+    },
+
     agent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Agent',
