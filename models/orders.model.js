@@ -30,6 +30,10 @@ const ordersSchema = mongoose.Schema(
             type: Number,
             required: [true, '欄位 `items.price` 必填'],
           },
+          status: {
+            type: Boolean,
+            default: false,
+          },
         },
       ],
       default: [],
@@ -53,7 +57,6 @@ const ordersSchema = mongoose.Schema(
         'inProgress', // 進行中
         'completed', // 完成
         'cancelled', // 取消
-        'awaitingPayment', // 等待付款
       ],
       default: 'pending',
     },
