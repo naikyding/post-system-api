@@ -147,7 +147,16 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const orderList = await ordersModel.find()
+  const orderList = await ordersModel.find().populate({
+    path: 'items',
+    populate: {
+      path: 'product',
+      populate: {
+        path: 'extras',
+      },
+    },
+  })
+
   successResponse({ res, data: orderList })
 })
 
