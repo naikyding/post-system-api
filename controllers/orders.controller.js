@@ -147,15 +147,15 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const orderList = await ordersModel.find().populate({
-    path: 'items',
-    populate: {
-      path: 'product',
+  const orderList = await ordersModel
+    .find()
+    .populate({
+      path: 'items',
       populate: {
-        path: 'extras',
+        path: 'product extras',
       },
-    },
-  })
+    })
+    .lean()
 
   successResponse({ res, data: orderList })
 })
