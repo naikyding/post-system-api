@@ -22,9 +22,9 @@ const ordersSchema = mongoose.Schema(
               ref: 'Extra',
             },
           ],
-          quantify: {
+          quantity: {
             type: Number,
-            required: [true, '欄位 `items.quantify` 必填'],
+            required: [true, '欄位 `items.quantity` 必填'],
           },
           price: {
             type: Number,
