@@ -7,6 +7,8 @@ const {
   validation,
 
   getOrderList,
+  updateOrderItem,
+  updateOrderList,
   createOrder,
   deleteOrder,
   deleteOrderItem,
@@ -14,6 +16,20 @@ const {
 
 router.get('/', getOrderList)
 router.post('/', validation.createOrder, validateHandler, createOrder)
+
+router.patch(
+  '/:id',
+  validation.updateOrderList,
+  validateHandler,
+  updateOrderList
+)
+router.patch(
+  '/item/:id',
+  validation.updateOrderItem,
+  validateHandler,
+  updateOrderItem
+)
+
 router.delete('/:id', validation.deleteOrder, validateHandler, deleteOrder)
 router.delete(
   '/item/:id',

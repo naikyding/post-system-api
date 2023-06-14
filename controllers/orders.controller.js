@@ -146,24 +146,14 @@ const validation = {
   ],
 
   updateOrderItem: [
-    body('agent')
-      .optional()
+    param('id')
       .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `agent id`')
+      .withMessage('無效的 `id`')
       .bail() // id 不存在
       .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('`agent id` 不存在')
-      }),
-
-    body('customer')
-      .optional()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `customer id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await customersModel.findById(id)
-        if (!matchItem) throw new Error('`customer id` 不存在')
+        // 刪除 order items 指定項目
+        const res = await ordersModel.findById(id)
+        if (!res) throw new Error('`id` 不存在')
       }),
 
     body('totalPrice')
@@ -241,6 +231,41 @@ const validation = {
           throw new Error('`extras` 中，有不存在的 ID')
       }),
   ],
+
+  updateOrderList: [
+    param('id')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `id`')
+      .custom(async (id, { req }) => {
+        // 更新資料
+        const bodyStatus = req.body.status
+        const matchOrder = await ordersModel.findByIdAndUpdate(id, {
+          status: bodyStatus, // 更新訂單狀態
+        })
+
+        if (!matchOrder) throw new Error('`id` 不存在')
+      }),
+    body('status')
+      .optional()
+      .notEmpty()
+      .withMessage('`status` 不可為空值')
+      .bail()
+      .isString()
+      .withMessage('`status` 必須為字串格式')
+      .bail()
+      .custom((status) => {
+        const statusFormatAry = [
+          'pending', // 待處理
+          'inProgress', // 進行中
+          'completed', // 完成
+          'cancelled', // 取消
+        ]
+        if (!statusFormatAry.includes(status))
+          throw new Error('`status` 格式錯誤')
+
+        return true
+      }),
+  ],
 }
 
 const getOrderList = catchAsync(async (req, res) => {
@@ -311,6 +336,8 @@ const createOrder = catchAsync(async (req, res) => {
   successResponse({ res, statusCode: 201, data: createdOrder })
 })
 
+const updateOrderList = getOrderList
+
 const updateOrderItem = catchAsync(async (req, res) => {
   console.log(req.body, req.params.id)
 })
@@ -323,6 +350,7 @@ module.exports = {
 
   getOrderList,
   createOrder,
+  updateOrderList,
   updateOrderItem,
   deleteOrder,
   deleteOrderItem,
