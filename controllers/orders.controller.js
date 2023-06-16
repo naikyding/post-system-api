@@ -1,6 +1,6 @@
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, param } = require('express-validator')
+const { body, param, query } = require('express-validator')
 
 const agentsModel = require('../models/agents.model')
 const customersModel = require('../models/customers.model')
@@ -10,6 +10,32 @@ const extrasModel = require('../models/extras.model')
 const ordersModel = require('../models/orders.model')
 
 const validation = {
+  getOrderList: [
+    query('limit')
+      .optional()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('query `limit` 必須為數字格式'),
+    query('status')
+      .optional()
+      .isString() // 為字串格式
+      .withMessage('`name` 必須為字串格式')
+      .isIn([
+        'pending', // 待處理
+        'inProgress', // 進行中
+        'completed', // 完成
+        'cancelled', // 取消
+      ])
+      .withMessage('query `status` 格式錯誤'),
+    query('offset')
+      .optional()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('query `offset` 必須為數字格式'),
+    query('paid')
+      .optional()
+      .isBoolean()
+      .withMessage('query `paid` 應為布林格式`'),
+  ],
+
   createOrder: [
     body('agent')
       .exists() // 欄位存在
@@ -269,6 +295,10 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
+  req.query.limit && console.log(req.query.limit)
+  req.query.type && console.log(req.query.type)
+  req.query.offset && console.log(req.query.offset)
+
   const orderList = await ordersModel
     .find()
     .populate({
@@ -277,6 +307,7 @@ const getOrderList = catchAsync(async (req, res) => {
         path: 'product extras',
       },
     })
+    .limit(req.query.limit)
     .lean()
 
   successResponse({ res, data: orderList })

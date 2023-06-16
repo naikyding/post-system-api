@@ -14,7 +14,7 @@ const {
   deleteOrderItem,
 } = require('../../controllers/orders.controller')
 
-router.get('/', getOrderList)
+router.get('/', validation.getOrderList, validateHandler, getOrderList)
 router.post('/', validation.createOrder, validateHandler, createOrder)
 
 router.patch(
