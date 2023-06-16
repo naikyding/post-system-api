@@ -295,20 +295,24 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  req.query.limit && console.log(req.query.limit)
-  req.query.type && console.log(req.query.type)
-  req.query.offset && console.log(req.query.offset)
+  const { status, paid: isPaid } = req.query
 
-  const orderList = await ordersModel
-    .find()
+  let getOrderListQuery = ordersModel.find()
+  if (status && isPaid) getOrderListQuery.find({ status, isPaid })
+  else {
+    if (status) getOrderListQuery.find({ status })
+    if (isPaid) getOrderListQuery.find({ isPaid })
+  }
+
+  const orderList = await getOrderListQuery
     .populate({
       path: 'items',
       populate: {
         path: 'product extras',
       },
     })
-    .limit(req.query.limit)
-    .skip(req.query.offset)
+    .limit(req.query.limit - 0)
+    .skip(req.query.offset - 0)
     .lean()
 
   successResponse({ res, data: orderList })
