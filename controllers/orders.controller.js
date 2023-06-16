@@ -308,6 +308,7 @@ const getOrderList = catchAsync(async (req, res) => {
       },
     })
     .limit(req.query.limit)
+    .skip(req.query.offset)
     .lean()
 
   successResponse({ res, data: orderList })
