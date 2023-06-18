@@ -312,6 +312,14 @@ const getOrderList = catchAsync(async (req, res) => {
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
   if (from && to) {
+    // 設定起始日期的時間為 00:00:00
+    from.setHours(0, 0, 0, 0)
+
+    // 設定結束日期的時間為 23:59:59
+    to.setHours(23, 59, 59, 999)
+
+    console.log(from, to)
+
     filterContent['createdAt'] = { $gte: from, $lte: to }
   }
 
