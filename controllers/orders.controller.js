@@ -33,7 +33,17 @@ const validation = {
     query('paid')
       .optional()
       .isBoolean()
-      .withMessage('query `paid` 應為布林格式`'),
+      .withMessage('query `paid` 應為布林格式'),
+    query('from')
+      .optional()
+      .isISO8601()
+      .withMessage('query `from` 日期格式錯誤')
+      .toDate(), // 驗證後轉為 Date 物件
+    query('to')
+      .optional()
+      .isISO8601()
+      .withMessage('query `to` 日期格式錯誤')
+      .toDate(), // 驗證後轉為 Date 物件
   ],
 
   createOrder: [
@@ -295,14 +305,22 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const { status, paid: isPaid } = req.query
+  const { status, paid: isPaid, from, to } = req.query
 
-  let getOrderListQuery = ordersModel.find()
-  if (status && isPaid) getOrderListQuery.find({ status, isPaid })
-  else {
-    if (status) getOrderListQuery.find({ status })
-    if (isPaid) getOrderListQuery.find({ isPaid })
+  let filterContent = {}
+
+  if (status) filterContent['status'] = status
+  if (isPaid) filterContent['isPaid'] = isPaid
+  if (from && to) {
+    filterContent['createdAt'] = { $gte: from, $lte: to }
   }
+
+  let getOrderListQuery = ordersModel.find(filterContent)
+  // if (status && isPaid) getOrderListQuery.find({ status, isPaid })
+  // else {
+  //   if (status) getOrderListQuery.find({ status })
+  //   if (isPaid) getOrderListQuery.find({ isPaid })
+  // }
 
   const orderList = await getOrderListQuery
     .populate({
