@@ -318,17 +318,19 @@ const getOrderList = catchAsync(async (req, res) => {
     // 設定結束日期的時間為 23:59:59
     to.setHours(23, 59, 59, 999)
 
-    console.log(from, to)
-
     filterContent['createdAt'] = { $gte: from, $lte: to }
   }
 
+  // 預設搜尋當日
+  if (!from && !to) {
+    const now = new Date()
+    filterContent['createdAt'] = {
+      $gte: now.setHours(0, 0, 0, 0),
+      $lte: now.setHours(23, 59, 59, 999),
+    }
+  }
+
   let getOrderListQuery = ordersModel.find(filterContent)
-  // if (status && isPaid) getOrderListQuery.find({ status, isPaid })
-  // else {
-  //   if (status) getOrderListQuery.find({ status })
-  //   if (isPaid) getOrderListQuery.find({ isPaid })
-  // }
 
   const orderList = await getOrderListQuery
     .populate({
