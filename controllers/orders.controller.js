@@ -1,6 +1,6 @@
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, param, query } = require('express-validator')
+const { body, param, query, validationResult } = require('express-validator')
 
 const agentsModel = require('../models/agents.model')
 const customersModel = require('../models/customers.model')
@@ -269,19 +269,6 @@ const validation = {
   ],
 
   updateOrderList: [
-    param('id')
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .custom(async (id, { req }) => {
-        // 更新資料
-        const { status, isPaid } = req.body
-        const matchOrder = await ordersModel.findByIdAndUpdate(id, {
-          status, // 更新訂單狀態
-          isPaid,
-        })
-
-        if (!matchOrder) throw new Error('`id` 不存在')
-      }),
     body('isPaid')
       .optional()
       .notEmpty()
@@ -308,6 +295,27 @@ const validation = {
           throw new Error('`status` 格式錯誤')
 
         return true
+      }),
+    param('id')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `id`')
+      .bail()
+      .custom(async (id, { req }) => {
+        const errorsValidate = validationResult(req)
+          .formatWith((errors) => errors.msg)
+          .array()
+
+        // 沒有錯誤才更新
+        if (errorsValidate.length > 0) return false
+
+        // 更新資料
+        const { status, isPaid } = req.body
+        const matchOrder = await ordersModel.findByIdAndUpdate(id, {
+          status, // 更新訂單狀態
+          isPaid,
+        })
+
+        if (!matchOrder) throw new Error('`id` 不存在')
       }),
   ],
 }
