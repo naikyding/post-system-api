@@ -274,13 +274,21 @@ const validation = {
       .withMessage('無效的 `id`')
       .custom(async (id, { req }) => {
         // 更新資料
-        const bodyStatus = req.body.status
+        const { status, isPaid } = req.body
         const matchOrder = await ordersModel.findByIdAndUpdate(id, {
-          status: bodyStatus, // 更新訂單狀態
+          status, // 更新訂單狀態
+          isPaid,
         })
 
         if (!matchOrder) throw new Error('`id` 不存在')
       }),
+    body('isPaid')
+      .optional()
+      .notEmpty()
+      .withMessage('`isPaid` 不可為空值')
+      .bail()
+      .isBoolean()
+      .withMessage('query `paid` 應為布林格式'),
     body('status')
       .optional()
       .notEmpty()
