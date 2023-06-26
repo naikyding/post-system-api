@@ -78,7 +78,7 @@ const validation = {
       .isLength({ min: 8 })
       .withMessage('密碼至少需要 8 個字元')
       .matches(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
-      .withMessage('密碼需要包含英文字母、數字和符號'),
+      .withMessage('密碼需要包含英文字母、數字和符號 @$!%*?&'),
   ],
 
   deleteCustomer: [
