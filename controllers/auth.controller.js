@@ -1,4 +1,7 @@
 const { body } = require('express-validator')
+const usersModel = require('../models/users.model')
+const bcrypt = require('bcryptjs')
+const { successResponse } = require('../utils/responseHandlers')
 
 const validation = {
   adminLogin: [
@@ -31,7 +34,14 @@ const validation = {
       .withMessage('email 不可為空值')
       .bail()
       .isEmail()
-      .withMessage('`email` 格式錯誤'),
+      .withMessage('`email` 格式錯誤')
+      .bail()
+      .custom(async (email) => {
+        const emailIncludes = await usersModel.findOne({ email })
+        console.log(emailIncludes)
+        if (emailIncludes) throw new Error('email 已存在')
+        return true
+      }),
     body('password')
       .exists() // 欄位存在
       .withMessage('password 必填')
@@ -41,8 +51,11 @@ const validation = {
       .bail()
       .isLength({ min: 8 })
       .withMessage('密碼至少需要 8 個字元')
-      .matches(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
-      .withMessage('密碼需要包含英文字母、數字和符號 @$!%*?&'),
+      .bail()
+      .matches(
+        /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&.,\/])[A-Za-z\d@$!%*?&.,\/]+$/
+      )
+      .withMessage('密碼需要包含英文字母、數字和符號 @$!%*?&.,/'),
     body('agents')
       .exists() // 欄位存在
       .withMessage('agents 必填')
@@ -68,8 +81,18 @@ const userLogin = (req, res) => {
   res.send(req.body)
 }
 
-const createUsers = (req, res) => {
-  res.send(req.body)
+const createUsers = async (req, res) => {
+  const { name, email, roles, agents, nickname, password } = req.body
+  const createUser = await usersModel.create({
+    name,
+    email,
+    roles,
+    agents,
+    nickname,
+    password: bcrypt.hashSync(password, 12),
+  })
+
+  successResponse({ res, data: createUser._id })
 }
 
 module.exports = {
