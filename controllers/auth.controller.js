@@ -126,9 +126,14 @@ const createUsers = async (req, res) => {
   successResponse({ res, data: createUser._id })
 }
 
+const verifyToken = async (req, res) => {
+  res.send(req.headers.authorization)
+}
+
 module.exports = {
   validation,
 
   userLogin,
   createUsers,
+  verifyToken,
 }
