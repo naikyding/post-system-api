@@ -12,7 +12,7 @@ const {
 const { errorResponse } = require('../../utils/responseHandlers')
 
 router.get('/verify-token', auth, verifyToken)
-router.post('/login', auth, validation.adminLogin, validateHandler, userLogin)
+router.post('/login', validation.adminLogin, validateHandler, userLogin)
 router.post('/users', validation.createUsers, validateHandler, createUsers)
 
 module.exports = router
