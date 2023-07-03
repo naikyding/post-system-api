@@ -1,5 +1,5 @@
 const successResponse = ({ res, status, statusCode, message, data }) => {
-  const dataByArray = Array.isArray(data) ? data : [data]
+  const dataByArray = Array.isArray(data) ? { items: data } : data
 
   res.status(statusCode || 200).json({
     status: status || true,
