@@ -3,11 +3,12 @@ const { errorResponse } = require('./responseHandlers')
 // (middleware) 驗證 token 是否夾帶於 header
 const auth = (req, res, next) => {
   const { authorization } = req.headers
-  if (!authorization)
+
+  if (!authorization || !authorization.startsWith('Bearer '))
     return errorResponse({
       res,
       statusCode: 401,
-      message: 'Missing authorization header',
+      message: 'Invalid authorization header',
     })
 
   next()
