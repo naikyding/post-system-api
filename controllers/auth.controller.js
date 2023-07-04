@@ -1,8 +1,13 @@
 const { body, validationResult } = require('express-validator')
 const usersModel = require('../models/users.model')
+
 const bcrypt = require('bcryptjs')
 const { successResponse } = require('../utils/responseHandlers')
-const { generatorToken, verifyToken } = require('../utils/auth')
+const {
+  generatorAccessToken,
+  generatorRefreshToken,
+  updateRefreshToken,
+} = require('../utils/auth')
 
 const validation = {
   adminLogin: [
@@ -110,12 +115,17 @@ const validation = {
 
 const userLogin = async (req, res) => {
   const { _id, email } = req.matchUser
-  const token = await generatorToken({ _id, email })
 
+  const accessToken = await generatorAccessToken({ _id, email })
+  const refreshToken = await generatorRefreshToken({ _id, email })
+
+  const refreshTokenId = await updateRefreshToken(_id, refreshToken)
+
+  console.log(refreshTokenId)
   successResponse({
     res,
     message: '登入成功',
-    data: { type: 'Bearer', token },
+    data: { type: 'Bearer', accessToken, refreshToken },
   })
 }
 

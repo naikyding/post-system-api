@@ -1,5 +1,6 @@
 const { errorResponse } = require('./responseHandlers')
 const jwt = require('jsonwebtoken')
+const refreshTokenModel = require('../models/refreshTokens.model')
 
 /**
  * 身份驗証 middleware (headers authorization)
@@ -24,7 +25,7 @@ const auth = async (req, res, next) => {
     return errorResponse({
       res,
       statusCode: 401,
-      message: 'Invalid authorization',
+      message: 'Unauthorized',
       errors: error.message,
     })
 
@@ -38,11 +39,21 @@ const auth = async (req, res, next) => {
  * @param {number} exp 時效 (預設 120 秒)
  * @returns {string} JWT Token
  */
-const generatorToken = (payload, exp = 120) => {
-  return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+const generatorAccessToken = (payload, exp = 0) =>
+  jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: exp,
   })
-}
+
+/**
+ * 產生 refresh token
+ * @param {object} payload 夾帶資料
+ * @param {number} exp 時效 (預設 1d)
+ * @returns {string} refresh Token
+ */
+const generatorRefreshToken = (payload, exp = '1d') =>
+  jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: exp,
+  })
 
 /**
  * 驗證 token 功能
@@ -55,4 +66,31 @@ const verifyToken = (token) =>
     return { payload }
   })
 
-module.exports = { auth, generatorToken, verifyToken }
+const updateRefreshToken = async (_id, refreshToken) => {
+  let userId = ''
+  const updateItem = await refreshTokenModel.findOneAndUpdate(
+    { userId: _id },
+    { token: refreshToken }
+  )
+
+  if (!updateItem) {
+    const createItem = await refreshTokenModel.create({
+      userId: _id,
+      token: refreshToken,
+    })
+
+    userId = createItem._id
+  } else {
+    userId = updateItem._id
+  }
+
+  return userId
+}
+
+module.exports = {
+  auth,
+  generatorAccessToken,
+  generatorRefreshToken,
+  verifyToken,
+  updateRefreshToken,
+}
