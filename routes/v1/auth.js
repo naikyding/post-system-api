@@ -7,11 +7,10 @@ const {
 
   userLogin,
   createUsers,
-  verifyToken,
+  verifyHeadersToken,
 } = require('../../controllers/auth.controller')
-const { errorResponse } = require('../../utils/responseHandlers')
 
-router.get('/verify-token', auth, verifyToken)
+router.get('/verify-token', auth, verifyHeadersToken)
 router.post('/login', validation.adminLogin, validateHandler, userLogin)
 router.post('/users', validation.createUsers, validateHandler, createUsers)
 

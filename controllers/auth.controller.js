@@ -2,7 +2,7 @@ const { body, validationResult } = require('express-validator')
 const usersModel = require('../models/users.model')
 const bcrypt = require('bcryptjs')
 const { successResponse } = require('../utils/responseHandlers')
-const { generatorToken } = require('../utils/auth')
+const { generatorToken, verifyToken } = require('../utils/auth')
 
 const validation = {
   adminLogin: [
@@ -16,13 +16,12 @@ const validation = {
       .isEmail()
       .withMessage('`email` 格式錯誤')
       .bail()
-      .custom(async (email, { req, res }) => {
+      .custom(async (email, { req }) => {
         const errorsValidate = validationResult(req)
           .formatWith((errors) => errors.msg)
           .array()
 
         if (errorsValidate.length > 0) return false
-        console.log(res)
         // 找搜 email
         const matchUser = await usersModel.findOne({ email })
         if (!matchUser) throw new Error('電子郵件或密碼錯誤')
@@ -134,8 +133,8 @@ const createUsers = async (req, res) => {
   successResponse({ res, data: createUser._id })
 }
 
-const verifyToken = async (req, res) => {
-  res.send(req.headers.authorization)
+const verifyHeadersToken = async (req, res) => {
+  successResponse({ res, message: '驗證成功', data: req.user })
 }
 
 module.exports = {
@@ -143,5 +142,5 @@ module.exports = {
 
   userLogin,
   createUsers,
-  verifyToken,
+  verifyHeadersToken,
 }
