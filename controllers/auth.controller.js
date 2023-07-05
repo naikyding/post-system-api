@@ -113,6 +113,15 @@ const validation = {
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 roles `id`'),
   ],
+
+  refreshToken: [
+    body('refreshToken')
+      .exists() // 欄位存在
+      .withMessage('refreshToken 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('refreshToken 不可為空值'),
+  ],
 }
 
 const userLogin = async (req, res) => {
@@ -177,7 +186,7 @@ const refreshToken = async (req, res, next) => {
 
   successResponse({
     res,
-    message: '更新 token 成功',
+    message: '更新成功',
     data: { type: 'Bearer', accessToken },
   })
 }

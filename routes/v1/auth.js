@@ -12,7 +12,12 @@ const {
 } = require('../../controllers/auth.controller')
 
 router.get('/verify-token', auth, verifyHeadersToken)
-router.post('/refresh-token', refreshToken)
+router.post(
+  '/refresh-token',
+  validation.refreshToken,
+  validateHandler,
+  refreshToken
+)
 
 router.post('/login', validation.adminLogin, validateHandler, userLogin)
 router.post('/users', validation.createUsers, validateHandler, createUsers)
