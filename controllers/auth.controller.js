@@ -1,12 +1,14 @@
 const { body, validationResult } = require('express-validator')
 const usersModel = require('../models/users.model')
+const refreshTokenModel = require('../models/refreshTokens.model')
 
 const bcrypt = require('bcryptjs')
-const { successResponse } = require('../utils/responseHandlers')
+const { successResponse, errorResponse } = require('../utils/responseHandlers')
 const {
   generatorAccessToken,
   generatorRefreshToken,
   updateRefreshToken,
+  verifyRefreshToken,
 } = require('../utils/auth')
 
 const validation = {
@@ -118,10 +120,8 @@ const userLogin = async (req, res) => {
 
   const accessToken = await generatorAccessToken({ _id, email })
   const refreshToken = await generatorRefreshToken({ _id, email })
-
   const refreshTokenId = await updateRefreshToken(_id, refreshToken)
 
-  console.log(refreshTokenId)
   successResponse({
     res,
     message: '登入成功',
@@ -147,10 +147,46 @@ const verifyHeadersToken = async (req, res) => {
   successResponse({ res, message: '驗證成功', data: req.user })
 }
 
+const refreshToken = async (req, res, next) => {
+  const bodyRefreshToken = req.body.refreshToken
+  const { error, payload } = await verifyRefreshToken(bodyRefreshToken)
+  if (error)
+    return errorResponse({
+      res,
+      statusCode: 401,
+      message: 'Unauthorized',
+      errors: error.message,
+    })
+
+  const matchRefreshItem = await refreshTokenModel.findOne({
+    userId: payload._id,
+    token: bodyRefreshToken,
+  })
+
+  if (!matchRefreshItem)
+    return errorResponse({
+      res,
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+
+  const accessToken = await generatorAccessToken({
+    _id: payload._id,
+    email: payload.email,
+  })
+
+  successResponse({
+    res,
+    message: '更新 token 成功',
+    data: { type: 'Bearer', accessToken },
+  })
+}
+
 module.exports = {
   validation,
 
   userLogin,
   createUsers,
   verifyHeadersToken,
+  refreshToken,
 }

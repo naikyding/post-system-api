@@ -39,7 +39,7 @@ const auth = async (req, res, next) => {
  * @param {number} exp 時效 (預設 120 秒)
  * @returns {string} JWT Token
  */
-const generatorAccessToken = (payload, exp = 0) =>
+const generatorAccessToken = (payload, exp = 30) =>
   jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: exp,
   })
@@ -62,6 +62,12 @@ const generatorRefreshToken = (payload, exp = '1d') =>
  */
 const verifyToken = (token) =>
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, payload) => {
+    if (error) return { error }
+    return { payload }
+  })
+
+const verifyRefreshToken = (token) =>
+  jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, (error, payload) => {
     if (error) return { error }
     return { payload }
   })
@@ -92,5 +98,6 @@ module.exports = {
   generatorAccessToken,
   generatorRefreshToken,
   verifyToken,
+  verifyRefreshToken,
   updateRefreshToken,
 }
