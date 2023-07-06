@@ -21,21 +21,8 @@ const validation = {
       .withMessage('email 不可為空值')
       .bail()
       .isEmail()
-      .withMessage('`email` 格式錯誤')
-      .bail()
-      .custom(async (email, { req }) => {
-        const errorsValidate = validationResult(req)
-          .formatWith((errors) => errors.msg)
-          .array()
+      .withMessage('`email` 格式錯誤'),
 
-        if (errorsValidate.length > 0) return false
-        // 找搜 email
-        const matchUser = await usersModel.findOne({ email })
-        if (!matchUser) throw new Error('電子郵件或密碼錯誤')
-
-        req.matchUser = matchUser
-        return true
-      }),
     body('password')
       .exists() // 欄位存在
       .withMessage('密碼 必填')
@@ -44,23 +31,7 @@ const validation = {
       .withMessage('密碼 不可為空值')
       .bail()
       .isString() // 為字串格式
-      .withMessage('密碼 必須為字串格式')
-      .bail()
-      .custom(async (password, { req }) => {
-        const errorsValidate = validationResult(req)
-          .formatWith((errors) => errors.msg)
-          .array()
-
-        if (errorsValidate.length > 0) return false
-
-        const matchPassword = await bcrypt.compareSync(
-          password,
-          req.matchUser.password
-        )
-
-        if (!matchPassword) throw new Error('電子郵件或密碼錯誤')
-        return true
-      }),
+      .withMessage('密碼 必須為字串格式'),
   ],
 
   createUsers: [
@@ -125,11 +96,31 @@ const validation = {
 }
 
 const userLogin = async (req, res) => {
-  const { _id, email } = req.matchUser
+  const { email, password } = req.body
+  const errorFunc = () =>
+    errorResponse({
+      res,
+      statusCode: 401,
+      message: '電子郵件或密碼錯誤',
+    })
 
-  const accessToken = await generatorAccessToken({ _id, email })
-  const refreshToken = await generatorRefreshToken({ _id, email })
-  const refreshTokenId = await updateRefreshToken(_id, refreshToken)
+  // 找搜 email
+  const matchUser = await usersModel.findOne({ email })
+  if (!matchUser) return errorFunc()
+
+  const matchPassword = await bcrypt.compareSync(password, matchUser.password)
+  if (!matchPassword) return errorFunc()
+
+  const accessToken = await generatorAccessToken({
+    _id: matchUser._id,
+    email: matchUser.email,
+  })
+  const refreshToken = await generatorRefreshToken({
+    _id: matchUser._id,
+    email: matchUser.email,
+  })
+
+  await updateRefreshToken(matchUser._id, refreshToken)
 
   successResponse({
     res,
