@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-
+const { auth } = require('../../utils/auth')
 const validateHandler = require('../../utils/validateHandler')
 
 const {
@@ -14,7 +14,7 @@ const {
   deleteOrderItem,
 } = require('../../controllers/orders.controller')
 
-router.get('/', validation.getOrderList, validateHandler, getOrderList)
+router.get('/', auth, validation.getOrderList, validateHandler, getOrderList)
 router.post('/', validation.createOrder, validateHandler, createOrder)
 
 router.patch(
