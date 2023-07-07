@@ -101,7 +101,8 @@ const userLogin = async (req, res) => {
     errorResponse({
       res,
       statusCode: 401,
-      message: '電子郵件或密碼錯誤',
+      message: '登入失敗',
+      errors: '電子郵件或密碼錯誤',
     })
 
   // 找搜 email
