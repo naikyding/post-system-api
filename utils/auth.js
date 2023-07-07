@@ -16,7 +16,8 @@ const auth = async (req, res, next) => {
     return errorResponse({
       res,
       statusCode: 401,
-      message: 'Invalid authorization header',
+      message: 'Unauthorized',
+      errors: 'Invalid authorization header',
     })
 
   const { error, payload } = await verifyToken(authorization.split(' ')[1])
