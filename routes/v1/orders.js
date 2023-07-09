@@ -15,16 +15,18 @@ const {
 } = require('../../controllers/orders.controller')
 
 router.get('/', auth, validation.getOrderList, validateHandler, getOrderList)
-router.post('/', validation.createOrder, validateHandler, createOrder)
+router.post('/', auth, validation.createOrder, validateHandler, createOrder)
 
 router.patch(
   '/:id',
+  auth,
   validation.updateOrderList,
   validateHandler,
   updateOrderList
 )
 router.patch(
   '/item/:id',
+  auth,
   validation.updateOrderItem,
   validateHandler,
   updateOrderItem
@@ -33,6 +35,7 @@ router.patch(
 router.delete('/:id', validation.deleteOrder, validateHandler, deleteOrder)
 router.delete(
   '/item/:id',
+  auth,
   validation.deleteOrderItem,
   validateHandler,
   deleteOrderItem
