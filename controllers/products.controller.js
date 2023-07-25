@@ -118,7 +118,7 @@ const getProducts = catchAsync(async (req, res, next) => {
   let formatAllProducts
 
   const allProducts = await productsModel
-    .find()
+    .find({ agents: { $in: [req.headers['mc-agents-id']] } })
     .select('-createdAt -updatedAt -agents') // 不顯示項目
     // 依 id 填充內容
     .populate({
