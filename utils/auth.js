@@ -40,7 +40,7 @@ const auth = async (req, res, next) => {
  * @param {number} exp 時效 (預設 120 秒)
  * @returns {string} JWT Token
  */
-const generatorAccessToken = (payload, exp = 30) =>
+const generatorAccessToken = (payload, exp = '1d') =>
   jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: exp,
   })
@@ -51,7 +51,7 @@ const generatorAccessToken = (payload, exp = 30) =>
  * @param {number} exp 時效 (預設 1d)
  * @returns {string} refresh Token
  */
-const generatorRefreshToken = (payload, exp = '1d') =>
+const generatorRefreshToken = (payload, exp = '3d') =>
   jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: exp,
   })
