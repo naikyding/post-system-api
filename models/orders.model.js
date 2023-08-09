@@ -61,6 +61,12 @@ const ordersSchema = mongoose.Schema(
       default: 'pending',
     },
 
+    // 手機未三碼
+    mobileNoThreeDigits: {
+      type: String,
+      default: '',
+    },
+
     note: {
       type: String,
       default: '',

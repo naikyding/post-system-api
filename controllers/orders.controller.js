@@ -400,12 +400,21 @@ const createOrder = catchAsync(async (req, res) => {
     else return (acc = [...acc, cur])
   }, [])
 
-  const { customer, totalPrice, agent, note, isPaid, paymentType } = req.body
+  const {
+    customer,
+    totalPrice,
+    agent,
+    note,
+    isPaid,
+    paymentType,
+    mobileNoThreeDigits,
+  } = req.body
 
   const createdOrder = await ordersModel.create({
     customer,
     totalPrice,
     agent,
+    mobileNoThreeDigits,
     note,
     isPaid,
     paymentType,
