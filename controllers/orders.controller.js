@@ -1,5 +1,5 @@
 const catchAsync = require('../utils/catchAsync')
-const { successResponse, errorResponse } = require('../utils/responseHandlers')
+const { successResponse } = require('../utils/responseHandlers')
 const { body, param, query, validationResult } = require('express-validator')
 
 const agentsModel = require('../models/agents.model')
@@ -88,7 +88,7 @@ const validation = {
       .custom((totalPrice, { req }) => {
         const items = req.body.items
         let allPrice = items.reduce((acc, cur) => {
-          return (acc += cur.price * cur.quantity)
+          return (acc += cur.price)
         }, 0)
 
         if (allPrice !== totalPrice)
@@ -207,7 +207,7 @@ const validation = {
       .custom((totalPrice, { req }) => {
         const items = req.body.items
         let allPrice = items.reduce((acc, cur) => {
-          return (acc += cur.price * cur.quantity)
+          return (acc += cur.price)
         }, 0)
 
         if (allPrice !== totalPrice)
