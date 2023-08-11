@@ -4,9 +4,18 @@ const agentsModel = require('../models/agents.model')
 const extrasModel = require('../models/extras.model')
 
 const { successResponse } = require('../utils/responseHandlers')
-const { body, validationResult, param } = require('express-validator')
+const { body, validationResult, param, header } = require('express-validator')
 
 const validation = {
+  getProduct: [
+    header('mc-agents-id')
+      .exists() // 欄位存在
+      .withMessage('廠商 ID 必填 (`header.mc-agents-id`)')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
+  ],
+
   createProduct: [
     body('agent')
       .exists() // 欄位存在
@@ -102,6 +111,7 @@ const validation = {
           throw new Error('`extras` 中，有不存在的 ID')
       }),
   ],
+
   deleteProduct: [
     param('id')
       .isMongoId() // 是否為 mongo id

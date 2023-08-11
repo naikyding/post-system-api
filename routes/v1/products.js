@@ -11,7 +11,7 @@ const {
   deleteProduct,
 } = require('../../controllers/products.controller')
 
-router.get('/', auth, getProducts)
+router.get('/', auth, validation.getProduct, validateHandler, getProducts)
 router.post('/', auth, validation.createProduct, validateHandler, createProduct)
 router.delete(
   '/:id',
