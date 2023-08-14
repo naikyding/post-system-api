@@ -370,7 +370,6 @@ const createOrder = catchAsync(async (req, res) => {
 
     if (curExtrasLength > 0) {
       cur.extras.forEach((curExtra) => {
-        console.log(curExtra)
         acc.forEach((accItem) => {
           accItem.extras.forEach((itemExtra) => {
             if (itemExtra === curExtra) matchCurExtrasNum++
@@ -378,7 +377,8 @@ const createOrder = catchAsync(async (req, res) => {
 
           if (
             matchCurExtrasNum === curExtrasLength &&
-            accItem.extras.length === curExtrasLength
+            accItem.extras.length === curExtrasLength &&
+            accItem.product === cur.product
           ) {
             sameItem = true
             accItem.quantity++
