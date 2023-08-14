@@ -328,21 +328,26 @@ const getOrderList = catchAsync(async (req, res) => {
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
   if (from && to) {
-    // 設定起始日期的時間為 00:00:00
-    from.setHours(0, 0, 0, 0)
+    // 00:00 ~ 23:59 換台灣時間
+    from.setHours(0 - 8, 0, 0, 0)
+    to.setHours(23 - 8, 59, 59, 999)
 
-    // 設定結束日期的時間為 23:59:59
-    to.setHours(23, 59, 59, 999)
-
+    console.log(`指定搜尋時間: (utc +0)`, from, to)
     filterContent['createdAt'] = { $gte: from, $lte: to }
   }
 
   // 預設搜尋當日
   if (!from && !to) {
-    const now = new Date()
+    const from = new Date()
+    const to = new Date()
+
+    // 台灣時間
+    from.setHours(0 - 8, 0, 0, 0)
+    to.setHours(23 - 8, 59, 59, 999)
+
     filterContent['createdAt'] = {
-      $gte: now.setHours(0, 0, 0, 0),
-      $lte: now.setHours(23, 59, 59, 999),
+      $gte: from,
+      $lte: to,
     }
   }
 
