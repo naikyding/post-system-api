@@ -353,6 +353,12 @@ const getOrderList = catchAsync(async (req, res) => {
 
   let getOrderListQuery = ordersModel.find(filterContent)
 
+  const sort = () => {
+    if (status === 'completed' || status === 'cancelled')
+      return { updatedAt: -1 }
+    return { createAt: 1 }
+  }
+
   const orderList = await getOrderListQuery
     .populate({
       path: 'items',
@@ -362,6 +368,7 @@ const getOrderList = catchAsync(async (req, res) => {
     })
     .limit(req.query.limit - 0)
     .skip(req.query.offset - 0)
+    .sort(sort())
     .lean()
 
   successResponse({ res, data: orderList })
