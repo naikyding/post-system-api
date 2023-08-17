@@ -173,7 +173,7 @@ const getProducts = catchAsync(async (req, res, next) => {
     }, [])
   }
 
-  res.setHeader('Cache-Control', 'public, max-age=3600') // 快取 1 小時
+  res.setHeader('Cache-Control', 'public, max-age=14400') // 快取 4 小時
   successResponse({ res, data: formatAllProducts || allProducts })
 })
 
