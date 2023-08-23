@@ -11,6 +11,18 @@ const ordersModel = require('../models/orders.model')
 
 const validation = {
   getOrderList: [
+    query('agent')
+      .exists() // 欄位存在
+      .withMessage('query `agent` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `agent id`')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await agentsModel.findById(id)
+        if (!matchItem) throw new Error('`agent id` 不存在')
+      }),
+
     query('limit')
       .optional()
       .isNumeric() // 為數格式 "123" 會過
@@ -321,12 +333,14 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const { status, paid: isPaid, from, to } = req.query
+  const { status, paid: isPaid, from, to, agent } = req.query
 
   let filterContent = {}
 
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
+  if (agent) filterContent['agent'] = agent
+
   if (from && to) {
     // 00:00 ~ 23:59 換台灣時間
     from.setHours(0 - 8, 0, 0, 0)
