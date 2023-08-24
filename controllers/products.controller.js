@@ -148,6 +148,7 @@ const getProducts = catchAsync(async (req, res, next) => {
       path: 'extras',
       select: '-createdAt -updatedAt -agents',
     })
+    .sort({ price: 1 })
     .lean() // 資訊不在擁有 mongoose 嵌入操作，為一般 js 物件
   // const cloneProduct = JSON.parse(JSON.stringify(allProducts))
 
@@ -176,6 +177,7 @@ const getProducts = catchAsync(async (req, res, next) => {
         matchTypeItem.items.push(cur)
         return acc
       }
+
       return (acc = [
         ...acc,
         {
@@ -184,6 +186,13 @@ const getProducts = catchAsync(async (req, res, next) => {
         },
       ])
     }, [])
+  }
+
+  if (formatAllProducts) {
+    formatAllProducts = [
+      ...formatAllProducts.filter((item) => item.type !== '塑膠提袋'),
+      formatAllProducts.find((item) => item.type === '塑膠提袋'),
+    ]
   }
 
   res.setHeader('Cache-Control', 'public, max-age=3600') // 快取 1 小時
