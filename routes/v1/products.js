@@ -9,6 +9,9 @@ const {
   getProducts,
   createProduct,
   deleteProduct,
+
+  createProductExtrasItem,
+  deleteProductExtrasItem,
 } = require('../../controllers/products.controller')
 
 router.get('/', auth, validation.getProduct, validateHandler, getProducts)
@@ -20,5 +23,16 @@ router.delete(
   validateHandler,
   deleteProduct
 )
+
+// 產品新增 配料
+router.post(
+  '/:productId/extras',
+  validation.createProductExtrasItem,
+  validateHandler,
+  createProductExtrasItem
+)
+
+// 產品刪除 配料
+router.delete('/:productId/extras/:extrasId', deleteProductExtrasItem)
 
 module.exports = router

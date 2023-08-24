@@ -122,6 +122,19 @@ const validation = {
         if (!matchItem) throw new Error('`id` 不存在')
       }),
   ],
+
+  createProductExtrasItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`')
+      .custom(async (id) => {
+        // const matchItem = await productsModel.findByIdAndDelete(id)
+        // if (!matchItem) throw new Error('`productId` 不存在')
+      }),
+  ],
 }
 
 const getProducts = catchAsync(async (req, res, next) => {
@@ -194,10 +207,30 @@ const createProduct = catchAsync(async (req, res, next) => {
 
 const deleteProduct = getProducts
 
+// 新增產品 配料
+const createProductExtrasItem = catchAsync(async (req, res, next) => {
+  const { productId } = req.params
+  console.log('productId', productId)
+
+  res.send('product extras post')
+})
+
+// 刪除產品 配料
+const deleteProductExtrasItem = catchAsync(async (req, res, next) => {
+  const { productId, extrasId } = req.params
+
+  console.log(productId, extrasId)
+
+  res.send('product extras delete')
+})
+
 module.exports = {
   validation,
 
   getProducts,
   createProduct,
   deleteProduct,
+
+  createProductExtrasItem,
+  deleteProductExtrasItem,
 }
