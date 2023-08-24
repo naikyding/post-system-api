@@ -15,6 +15,7 @@ const {
 } = require('../../controllers/products.controller')
 
 router.get('/', auth, validation.getProduct, validateHandler, getProducts)
+
 router.post('/', auth, validation.createProduct, validateHandler, createProduct)
 router.delete(
   '/:id',
@@ -33,6 +34,11 @@ router.post(
 )
 
 // 產品刪除 配料
-router.delete('/:productId/extras/:extrasId', deleteProductExtrasItem)
+router.delete(
+  '/:productId/extras/:extrasId',
+  validation.deleteProductExtrasItem,
+  validateHandler,
+  deleteProductExtrasItem
+)
 
 module.exports = router

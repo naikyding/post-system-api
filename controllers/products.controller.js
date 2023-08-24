@@ -16,6 +16,15 @@ const validation = {
       .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
   ],
 
+  getProductItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`'),
+  ],
+
   createProduct: [
     body('agent')
       .exists() // 欄位存在
@@ -135,6 +144,32 @@ const validation = {
         // if (!matchItem) throw new Error('`productId` 不存在')
       }),
   ],
+
+  deleteProductExtrasItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`')
+      .custom(async (productId) => {
+        const matchProduct = await productsModel.findById(productId)
+        if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
+      }),
+    param('extrasId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `extrasId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `extrasId`')
+      .custom(async (extrasId, { req }) => {
+        const productId = req.params.productId
+
+        await productsModel.findByIdAndUpdate(productId, {
+          $pull: { extras: extrasId },
+        })
+      }),
+  ],
 }
 
 const getProducts = catchAsync(async (req, res, next) => {
@@ -226,11 +261,9 @@ const createProductExtrasItem = catchAsync(async (req, res, next) => {
 
 // 刪除產品 配料
 const deleteProductExtrasItem = catchAsync(async (req, res, next) => {
-  const { productId, extrasId } = req.params
+  const productItem = await productsModel.findById(req.params.productId)
 
-  console.log(productId, extrasId)
-
-  res.send('product extras delete')
+  successResponse({ res, data: productItem })
 })
 
 module.exports = {
