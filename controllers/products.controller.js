@@ -144,9 +144,9 @@ const validation = {
         const matchProduct = await productsModel.findById(productId)
         if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
       }),
-    body('extras')
+    body('extrasId')
       .exists() // 欄位存在
-      .withMessage('欄位 `extras` 必填')
+      .withMessage('欄位 `extrasId` 必填')
       .bail()
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `extras id`')
