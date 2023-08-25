@@ -152,6 +152,7 @@ const validation = {
       .bail()
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `productId`')
+      .bail()
       .custom(async (productId) => {
         const matchProduct = await productsModel.findById(productId)
         if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
@@ -162,12 +163,19 @@ const validation = {
       .bail()
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `extrasId`')
+      .bail()
       .custom(async (extrasId, { req }) => {
         const productId = req.params.productId
+        const errorsValidate = validationResult(req)
+          .formatWith((errors) => errors.msg)
+          .array()
 
-        await productsModel.findByIdAndUpdate(productId, {
-          $pull: { extras: extrasId },
-        })
+        // 若沒有錯誤才執行
+        if (errorsValidate.length < 1) {
+          await productsModel.findByIdAndUpdate(productId, {
+            $pull: { extras: extrasId },
+          })
+        }
       }),
   ],
 }
