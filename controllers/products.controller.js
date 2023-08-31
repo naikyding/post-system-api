@@ -16,6 +16,15 @@ const validation = {
       .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
   ],
 
+  getProductItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`'),
+  ],
+
   createProduct: [
     body('agent')
       .exists() // 欄位存在
@@ -122,9 +131,77 @@ const validation = {
         if (!matchItem) throw new Error('`id` 不存在')
       }),
   ],
+
+  createProductExtrasItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`')
+      .bail()
+      .custom(async (productId) => {
+        const matchProduct = await productsModel.findById(productId)
+        if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
+      }),
+    body('extrasId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `extrasId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `extras id`')
+      .bail()
+      // extras id 是否存在
+      .custom(async (extrasId) => {
+        const matchExtrasItem = await extrasModel.findById(extrasId)
+        if (!matchExtrasItem) throw new Error('extrasId Error: 配料不存在 ')
+      })
+      .bail()
+      .custom(async (extrasId, { req }) => {
+        const productId = req.params.productId
+
+        await productsModel.findByIdAndUpdate(productId, {
+          $addToSet: { extras: extrasId },
+        })
+      }),
+  ],
+
+  deleteProductExtrasItem: [
+    param('productId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `productId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `productId`')
+      .bail()
+      .custom(async (productId) => {
+        const matchProduct = await productsModel.findById(productId)
+        if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
+      }),
+    param('extrasId')
+      .exists() // 欄位存在
+      .withMessage('欄位 `extrasId` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `extrasId`')
+      .bail()
+      .custom(async (extrasId, { req }) => {
+        const productId = req.params.productId
+        const errorsValidate = validationResult(req)
+          .formatWith((errors) => errors.msg)
+          .array()
+
+        // 若沒有錯誤才執行
+        if (errorsValidate.length < 1) {
+          await productsModel.findByIdAndUpdate(productId, {
+            $pull: { extras: extrasId },
+          })
+        }
+      }),
+  ],
 }
 
-const getProducts = catchAsync(async (req, res, next) => {
+const getProducts = catchAsync(async (req, res) => {
   let formatAllProducts
 
   const allProducts = await productsModel
@@ -186,7 +263,7 @@ const getProducts = catchAsync(async (req, res, next) => {
   successResponse({ res, data: formatAllProducts || allProducts })
 })
 
-const createProduct = catchAsync(async (req, res, next) => {
+const createProduct = catchAsync(async (req, res) => {
   const { name, type, description, agent, extras, price, image } = req.body
   const createItem = await productsModel.create({
     type,
@@ -203,10 +280,32 @@ const createProduct = catchAsync(async (req, res, next) => {
 
 const deleteProduct = getProducts
 
+const getProductItem = async (productId) => {
+  const productItem = await productsModel.findById(productId)
+  return productItem
+}
+
+// 新增產品 配料
+const createProductExtrasItem = catchAsync(async (req, res) => {
+  const productItem = await getProductItem(req.params.productId)
+
+  successResponse({ res, data: productItem })
+})
+
+// 刪除產品 配料
+const deleteProductExtrasItem = catchAsync(async (req, res) => {
+  const productItem = await getProductItem(req.params.productId)
+
+  successResponse({ res, data: productItem })
+})
+
 module.exports = {
   validation,
 
   getProducts,
   createProduct,
   deleteProduct,
+
+  createProductExtrasItem,
+  deleteProductExtrasItem,
 }
