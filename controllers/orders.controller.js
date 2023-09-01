@@ -194,14 +194,26 @@ const validation = {
   ],
 
   updateOrderItem: [
-    param('id')
+    param('orderId')
       .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
+      .withMessage('無效的 `orderId`')
       .bail() // id 不存在
-      .custom(async (id) => {
+      .custom(async (id, { req }) => {
         // 刪除 order items 指定項目
         const res = await ordersModel.findById(id)
-        if (!res) throw new Error('`id` 不存在')
+        if (!res) throw new Error('`orderId` 不存在')
+        req.matchOrder = res
+      }),
+
+    param('itemId')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `itemId`')
+      .bail() // itemId 不存在
+      .custom(async (itemId, { req, res }) => {
+        const matchItem = await req.matchOrder.items.find(
+          (item) => item._id == req.params.itemId
+        )
+        if (!matchItem) throw new Error('`itemId` 不存在')
       }),
 
     body('totalPrice')
@@ -377,7 +389,16 @@ const getOrderList = catchAsync(async (req, res) => {
     .populate({
       path: 'items',
       populate: {
-        path: 'product extras',
+        path: 'product',
+        populate: {
+          path: 'extras',
+        },
+      },
+    })
+    .populate({
+      path: 'items',
+      populate: {
+        path: 'extras',
       },
     })
     .limit(req.query.limit - 0)
@@ -454,7 +475,7 @@ const createOrder = catchAsync(async (req, res) => {
 const updateOrderList = getOrderList
 
 const updateOrderItem = catchAsync(async (req, res) => {
-  console.log(req.body, req.params.id)
+  console.log(req.params.orderId, req.params.itemId)
 })
 
 const deleteOrder = getOrderList
