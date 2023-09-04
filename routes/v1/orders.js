@@ -24,8 +24,9 @@ router.patch(
   validateHandler,
   updateOrderList
 )
+
 router.patch(
-  '/item/:id',
+  '/:orderId/item/:itemId',
   auth,
   validation.updateOrderItem,
   validateHandler,

@@ -194,90 +194,55 @@ const validation = {
   ],
 
   updateOrderItem: [
-    param('id')
+    param('orderId')
       .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
+      .withMessage('無效的 `orderId`')
       .bail() // id 不存在
-      .custom(async (id) => {
-        // 刪除 order items 指定項目
+      .custom(async (id, { req }) => {
         const res = await ordersModel.findById(id)
-        if (!res) throw new Error('`id` 不存在')
+        if (!res) throw new Error('`orderId` 不存在')
+        req.matchOrder = res
       }),
 
-    body('totalPrice')
-      .optional()
-      .notEmpty()
-      .withMessage('`totalPrice` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`totalPrice` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`totalPrice` 不可為 0')
-      .bail()
-      .custom((totalPrice, { req }) => {
-        const items = req.body.items
-        let allPrice = items.reduce((acc, cur) => {
-          return (acc += cur.price)
-        }, 0)
-
-        if (allPrice !== totalPrice)
-          throw new Error(
-            `totalPrice 金額 $${totalPrice}  與 items 計算金額 $${allPrice} 不符`
-          )
-
-        return true
-      }),
-
-    // 驗證 items 子項目
-    body('items.*.status')
-      .isBoolean()
-      .withMessage('無效的 `items.*.status 應為布林格式`'),
-    body('items.*.product')
+    param('itemId')
       .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.product id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await productsModel.findById(id)
-        if (!matchItem) throw new Error('`items.*.product id` 不存在')
+      .withMessage('無效的 `itemId`')
+      .bail() // itemId 不存在
+      .custom(async (itemId, { req, res }) => {
+        const matchItem = await req.matchOrder.items.find(
+          (item) => item._id == req.params.itemId
+        )
+        if (!matchItem) throw new Error('`itemId` 不存在')
+        req.matchOrderItem = matchItem
       }),
-    body('items.*.price')
-      .notEmpty()
-      .withMessage('`items.*.price` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.price` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.price` 不可為 0'),
-    body('items.*.quantity')
-      .notEmpty()
-      .withMessage('`items.*.quantity` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.quantity` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.quantity` 不可為 0'),
-    body('items.*.extras')
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.extras id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
 
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
+    body('extrasTotal').custom(async (extrasTotal, { req }) => {
+      const productItem = await productsModel.findById(
+        req.matchOrderItem.product
+      )
 
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
-      }),
+      const res = await ordersModel.findOneAndUpdate(
+        {
+          _id: req.params.orderId,
+          'items._id': req.params.itemId,
+        },
+        {
+          $set: {
+            'items.$.extras': req.body.extras,
+            'items.$.price': productItem.price + extrasTotal,
+            totalPrice:
+              req.matchOrder.totalPrice -
+              req.matchOrderItem.price +
+              (productItem.price + extrasTotal),
+          },
+        },
+        {
+          new: true,
+        }
+      )
+
+      if (!res) throw new Error(`更新發生錯誤`)
+    }),
   ],
 
   updateOrderList: [
@@ -377,7 +342,16 @@ const getOrderList = catchAsync(async (req, res) => {
     .populate({
       path: 'items',
       populate: {
-        path: 'product extras',
+        path: 'product',
+        populate: {
+          path: 'extras',
+        },
+      },
+    })
+    .populate({
+      path: 'items',
+      populate: {
+        path: 'extras',
       },
     })
     .limit(req.query.limit - 0)
@@ -453,9 +427,7 @@ const createOrder = catchAsync(async (req, res) => {
 
 const updateOrderList = getOrderList
 
-const updateOrderItem = catchAsync(async (req, res) => {
-  console.log(req.body, req.params.id)
-})
+const updateOrderItem = getOrderList
 
 const deleteOrder = getOrderList
 const deleteOrderItem = getOrderList
