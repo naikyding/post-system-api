@@ -199,7 +199,6 @@ const validation = {
       .withMessage('無效的 `orderId`')
       .bail() // id 不存在
       .custom(async (id, { req }) => {
-        // 刪除 order items 指定項目
         const res = await ordersModel.findById(id)
         if (!res) throw new Error('`orderId` 不存在')
         req.matchOrder = res
@@ -214,82 +213,30 @@ const validation = {
           (item) => item._id == req.params.itemId
         )
         if (!matchItem) throw new Error('`itemId` 不存在')
+        req.matchOrderItem = matchItem
       }),
 
-    body('totalPrice')
-      .optional()
-      .notEmpty()
-      .withMessage('`totalPrice` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`totalPrice` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`totalPrice` 不可為 0')
-      .bail()
-      .custom((totalPrice, { req }) => {
-        const items = req.body.items
-        let allPrice = items.reduce((acc, cur) => {
-          return (acc += cur.price)
-        }, 0)
+    body('extrasTotal').custom(async (extrasTotal, { req }) => {
+      const productItem = await productsModel.findById(
+        req.matchOrderItem.product
+      )
 
-        if (allPrice !== totalPrice)
-          throw new Error(
-            `totalPrice 金額 $${totalPrice}  與 items 計算金額 $${allPrice} 不符`
-          )
+      const editForm = {
+        extras: req.body.extras,
+        price: productItem.price + extrasTotal,
+        totalPrice:
+          req.matchOrder.totalPrice -
+          req.matchOrderItem.price +
+          (productItem.price + extrasTotal),
+      }
 
-        return true
-      }),
+      console.log(editForm)
 
-    // 驗證 items 子項目
-    body('items.*.status')
-      .isBoolean()
-      .withMessage('無效的 `items.*.status 應為布林格式`'),
-    body('items.*.product')
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.product id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await productsModel.findById(id)
-        if (!matchItem) throw new Error('`items.*.product id` 不存在')
-      }),
-    body('items.*.price')
-      .notEmpty()
-      .withMessage('`items.*.price` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.price` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.price` 不可為 0'),
-    body('items.*.quantity')
-      .notEmpty()
-      .withMessage('`items.*.quantity` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.quantity` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.quantity` 不可為 0'),
-    body('items.*.extras')
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.extras id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
+      // 修改
+      // const res = await ordersModel.findByIdAndUpdate(productItem._id, editForm)
 
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
-
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
-      }),
+      // console.log(res)
+    }),
   ],
 
   updateOrderList: [
@@ -474,9 +421,7 @@ const createOrder = catchAsync(async (req, res) => {
 
 const updateOrderList = getOrderList
 
-const updateOrderItem = catchAsync(async (req, res) => {
-  console.log(req.params.orderId, req.params.itemId)
-})
+const updateOrderItem = catchAsync(async (req, res) => {})
 
 const deleteOrder = getOrderList
 const deleteOrderItem = getOrderList
