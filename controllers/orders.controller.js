@@ -221,21 +221,27 @@ const validation = {
         req.matchOrderItem.product
       )
 
-      const editForm = {
-        extras: req.body.extras,
-        price: productItem.price + extrasTotal,
-        totalPrice:
-          req.matchOrder.totalPrice -
-          req.matchOrderItem.price +
-          (productItem.price + extrasTotal),
-      }
+      const res = await ordersModel.findOneAndUpdate(
+        {
+          _id: req.params.orderId,
+          'items._id': req.params.itemId,
+        },
+        {
+          $set: {
+            'items.$.extras': req.body.extras,
+            'items.$.price': productItem.price + extrasTotal,
+            totalPrice:
+              req.matchOrder.totalPrice -
+              req.matchOrderItem.price +
+              (productItem.price + extrasTotal),
+          },
+        },
+        {
+          new: true,
+        }
+      )
 
-      console.log(editForm)
-
-      // 修改
-      // const res = await ordersModel.findByIdAndUpdate(productItem._id, editForm)
-
-      // console.log(res)
+      if (!res) throw new Error(`更新發生錯誤`)
     }),
   ],
 
@@ -421,7 +427,7 @@ const createOrder = catchAsync(async (req, res) => {
 
 const updateOrderList = getOrderList
 
-const updateOrderItem = catchAsync(async (req, res) => {})
+const updateOrderItem = getOrderList
 
 const deleteOrder = getOrderList
 const deleteOrderItem = getOrderList
