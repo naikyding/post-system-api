@@ -221,6 +221,9 @@ const validation = {
         req.matchOrderItem.product
       )
 
+      const newProductItemPrice =
+        (productItem.price + extrasTotal) * req.matchOrderItem.quantity
+
       const res = await ordersModel.findOneAndUpdate(
         {
           _id: req.params.orderId,
@@ -229,11 +232,11 @@ const validation = {
         {
           $set: {
             'items.$.extras': req.body.extras,
-            'items.$.price': productItem.price + extrasTotal,
+            'items.$.price': newProductItemPrice,
             totalPrice:
               req.matchOrder.totalPrice -
               req.matchOrderItem.price +
-              (productItem.price + extrasTotal),
+              newProductItemPrice,
           },
         },
         {
