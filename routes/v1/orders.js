@@ -10,12 +10,20 @@ const {
   updateOrderItem,
   updateOrderList,
   createOrder,
+  createOrderItem,
   deleteOrder,
   deleteOrderItem,
 } = require('../../controllers/orders.controller')
 
 router.get('/', auth, validation.getOrderList, validateHandler, getOrderList)
 router.post('/', auth, validation.createOrder, validateHandler, createOrder)
+router.post(
+  '/:id',
+  auth,
+  validation.createOrderItem,
+  validateHandler,
+  createOrderItem
+)
 
 router.patch(
   '/:id',
