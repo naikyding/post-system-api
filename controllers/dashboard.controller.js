@@ -1,6 +1,8 @@
 const { query, header } = require('express-validator')
 const agentsModel = require('../models/agents.model')
 const orderModel = require('../models/orders.model')
+const { successResponse } = require('../utils/responseHandlers')
+const { getAllPaymentTypeTotal } = require('../utils/dashboard')
 
 const validation = {
   getBaseData: [
@@ -55,10 +57,63 @@ const validation = {
 }
 
 const getBaseData = async (req, res, next) => {
-  const { status, isPaid, from, to } = req.query
+  const { status, isPaid, from, to, payType } = req.query
   const agentId = req.agentId
+  let filterContent = {}
 
-  console.log(status, isPaid, from, to, agentId)
+  if (status) filterContent['status'] = status
+  if (isPaid) filterContent['isPaid'] = isPaid === 'true' ? true : false
+  if (agentId) filterContent['agent'] = agentId
+  if (payType)
+    filterContent['paymentType'] = payType === 'linepay' ? 'Line Pay' : payType
+
+  // 若有日期
+  if (from && to) {
+    // 00:00 ~ 23:59 換台灣時間
+    from.setHours(0 - 8, 0, 0, 0)
+    to.setHours(23 - 8, 59, 59, 999)
+
+    console.log(`指定搜尋時間: (utc +0)`, from, to)
+    filterContent['createdAt'] = { $gte: from, $lte: to }
+  }
+
+  // 若無日期 (預設搜尋當日)
+  if (!from && !to) {
+    const from = new Date()
+    const to = new Date()
+
+    // 台灣時間
+    from.setHours(0 - 8, 0, 0, 0)
+    to.setHours(23 - 8, 59, 59, 999)
+
+    filterContent['createdAt'] = {
+      $gte: from,
+      $lte: to,
+    }
+  }
+
+  const searchOrderData = await orderModel
+    .find(filterContent)
+    .populate({
+      path: 'items',
+      populate: {
+        path: 'product',
+        populate: {
+          path: 'extras',
+        },
+      },
+    })
+    .populate({
+      path: 'items',
+      populate: {
+        path: 'extras',
+      },
+    })
+    .lean()
+
+  const total = getAllPaymentTypeTotal(searchOrderData)
+
+  successResponse({ res, data: { total } })
 }
 
 module.exports = {
