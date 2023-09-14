@@ -53,6 +53,22 @@ const getAllPaymentTypeTotal = (orderData) => {
           total: 0,
         },
       ],
+      pending: [
+        {
+          type: 'cash',
+          orderQuantity: 0,
+          itemQuantity: 0,
+          bagQuantity: 0,
+          total: 0,
+        },
+        {
+          type: 'Line Pay',
+          orderQuantity: 0,
+          itemQuantity: 0,
+          bagQuantity: 0,
+          total: 0,
+        },
+      ],
       cancelled: [
         {
           type: 'cash',
