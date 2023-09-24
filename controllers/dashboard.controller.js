@@ -64,7 +64,7 @@ const getBaseData = async (req, res, next) => {
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid === 'true' ? true : false
   if (agentId) filterContent['agent'] = agentId
-  if (payType)
+  if (payType !== 'all')
     filterContent['paymentType'] = payType === 'linepay' ? 'Line Pay' : payType
 
   // 若有日期
