@@ -167,6 +167,8 @@ const validation = {
       }),
   ],
 
+  createOrderItem: [],
+
   deleteOrder: [
     param('id')
       .isMongoId() // 是否為 mongo id
@@ -427,7 +429,9 @@ const createOrder = catchAsync(async (req, res) => {
 
   successResponse({ res, statusCode: 201, data: createdOrder })
 })
-
+const createOrderItem = catchAsync(async (req, res) => {
+  res.send('createOrderItem')
+})
 const updateOrderList = getOrderList
 
 const updateOrderItem = getOrderList
@@ -440,6 +444,7 @@ module.exports = {
 
   getOrderList,
   createOrder,
+  createOrderItem,
   updateOrderList,
   updateOrderItem,
   deleteOrder,
