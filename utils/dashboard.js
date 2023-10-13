@@ -8,7 +8,7 @@ const getAllPaymentTypeTotal = (orderData) => {
       const formatQuantity = cur.items.reduce(
         (init, cur) => {
           if (cur.product.type === '塑膠提袋') init['bag'] += 1
-          else init['item'] += 1
+          else init['item'] += cur.quantity
           return init
         },
         {
