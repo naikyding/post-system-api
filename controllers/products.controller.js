@@ -223,15 +223,27 @@ const getProducts = catchAsync(async (req, res) => {
         const matchExtraAccTypeItem = extraAcc.find(
           (accItem) => accItem.type === extraCur.type
         )
+
         if (matchExtraAccTypeItem) {
           matchExtraAccTypeItem.items.push(extraCur)
+
           return extraAcc
         }
+
+        if (extraCur.type === '加購') {
+          return (extraAcc = [
+            { type: extraCur.type, items: [extraCur] },
+            ...extraAcc,
+          ])
+        }
+
         return (extraAcc = [
           ...extraAcc,
           { type: extraCur.type, items: [extraCur] },
         ])
       }, [])
+
+      if (formatExtras.length > 0) formatExtras.push(formatExtras.shift())
 
       cur.extras = formatExtras
 
