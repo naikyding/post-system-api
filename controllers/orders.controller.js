@@ -303,13 +303,16 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const { status, paid: isPaid, from, to, agent } = req.query
+  const { status, paid: isPaid, from, to, agent, paymentType } = req.query
 
   let filterContent = {}
 
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
   if (agent) filterContent['agent'] = agent
+  if (paymentType)
+    filterContent['paymentType'] =
+      paymentType === 'linePay' ? 'Line Pay' : paymentType
 
   if (from && to) {
     // 00:00 ~ 23:59 換台灣時間
