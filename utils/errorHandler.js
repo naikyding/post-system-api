@@ -9,7 +9,7 @@ const errorCallback = ({ req, res, next, errors }) => {
 
   const errorsData =
     errors.name === 'ValidationError'
-      ? Object.values(errors.errors).map((item) => item.properties.message)
+      ? Object.values(errors.errors).map((item) => item.properties?.message)
       : errors.stack
 
   if (res)
