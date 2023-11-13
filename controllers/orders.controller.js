@@ -226,7 +226,8 @@ const validation = {
           const reqProductItemExtrasTotalPrice =
             reqProductItem.extras.length > 0
               ? reqProductItem.extras.reduce(
-                  (acc, cur) => acc.price + cur.price
+                  (acc, cur) => (acc += cur.price),
+                  0
                 )
               : 0
 
@@ -267,7 +268,7 @@ const validation = {
 
         if (allPrice !== totalPrice)
           throw new Error(
-            `totalPrice 金額 $${totalPrice}  與 items 計算金額 $${allPrice} 不符`
+            `totalPrice 金額 $${totalPrice}  與計算金額 $${allPrice} 不符`
           )
 
         return true
@@ -467,6 +468,10 @@ const getOrderList = catchAsync(async (req, res) => {
       path: 'items',
       populate: {
         path: 'extras',
+        populate: {
+          path: 'extraItem',
+          select: '-createdAt -updatedAt',
+        },
       },
     })
     .limit(req.query.limit - 0)
