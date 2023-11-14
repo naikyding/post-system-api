@@ -147,6 +147,7 @@ const validation = {
       .not()
       .isIn([0, '0'])
       .withMessage('`items.*.quantity` 不可為 0'),
+
     body('items.*.extras.*.extraItem')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `items.*.extraItem id`')
@@ -326,13 +327,71 @@ const validation = {
         req.matchOrderItem = matchItem
       }),
 
-    body('extrasTotal').custom(async (extrasTotal, { req }) => {
-      const productItem = await productsModel.findById(
+    // // 驗證「配料」金額
+    body('extras.*.price')
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.price` 必須為數字格式'),
+
+    // // 驗證「配料」數量
+    body('extras.*.quantity')
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`extras.*.quantity` 必須為數字格式'),
+
+    // 驗証配料各項金額是否正確
+    body('extras')
+      .isArray()
+      .withMessage('`extras` 應為陣列')
+      .custom(async (extras) => {
+        const extraItemIds = extras.map((item) => item.extraItem)
+        const extrasData = await extrasModel.find({
+          _id: { $in: extraItemIds },
+        })
+
+        extras.forEach((item) => {
+          const originExtraItem = extrasData.find(
+            (originalExtraItem) => originalExtraItem._id == item.extraItem
+          )
+
+          const originExtraItemPrice = originExtraItem.price
+          const computedTotal = item.quantity * originExtraItemPrice
+
+          if (item.price !== computedTotal)
+            throw new Error(
+              `配料 「${originExtraItem.name}」 金額計算錯誤，收到 $${item.price} (應為 $${computedTotal} / ${item.quantity} * ${originExtraItemPrice})`
+            )
+        })
+      }),
+
+    // 寫入資料庫
+    body('totalPrice').custom(async (totalPrice, { req }) => {
+      console.log('totalPrice')
+
+      // 項目的金額 (舊)
+      const oldOrderItemPrice = req.matchOrderItem.price
+
+      // 配料總金額 (新)
+      const updateExtrasPrice = req.body.extras.reduce(
+        (acc, cur) => (acc += cur.price),
+        0
+      )
+
+      const originProduct = await productsModel.findById(
         req.matchOrderItem.product
       )
 
-      const newProductItemPrice =
-        (productItem.price + extrasTotal) * req.matchOrderItem.quantity
+      // 產品金額 (原)
+      const originProductPrice = originProduct.price
+
+      // 訂單總金額 (舊)
+      const oldOrderListTotal = req.matchOrder.totalPrice
+
+      // 訂單「項目」更新金額
+      const updateItemPrice =
+        (originProductPrice + updateExtrasPrice) * req.matchOrderItem.quantity
+
+      // 訂單更新金額
+      const updateTotalPrice =
+        oldOrderListTotal - oldOrderItemPrice + updateItemPrice
 
       const res = await ordersModel.findOneAndUpdate(
         {
@@ -342,11 +401,8 @@ const validation = {
         {
           $set: {
             'items.$.extras': req.body.extras,
-            'items.$.price': newProductItemPrice,
-            totalPrice:
-              req.matchOrder.totalPrice -
-              req.matchOrderItem.price +
-              newProductItemPrice,
+            'items.$.price': updateItemPrice,
+            totalPrice: updateTotalPrice,
           },
         },
         {
