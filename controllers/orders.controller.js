@@ -84,7 +84,7 @@ const validation = {
       }),
 
     // 驗證配料加總金額
-    body('items.*.extras')
+    body('items.*.extrasData')
       .isArray()
       .bail()
       .withMessage('欄位 `items.*.extras` 必須為陣列')
@@ -148,7 +148,11 @@ const validation = {
       .isIn([0, '0'])
       .withMessage('`items.*.quantity` 不可為 0'),
 
-    body('items.*.extras.*.extraItem')
+    body('items.extras')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.extras id`'),
+
+    body('items.*.extrasData.*.extraItem')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `items.*.extraItem id`')
       .bail() // id 不存在
@@ -165,7 +169,7 @@ const validation = {
           throw new Error('`extras` 中，有不存在的 ID')
       }),
 
-    body('items.*.extras.*.quantity')
+    body('items.*.extrasData.*.quantity')
       .exists() // 欄位存在
       .withMessage('欄位 `items.*.extras.*.quantity` 必填')
       .bail() // 不可為空
@@ -176,7 +180,7 @@ const validation = {
       .withMessage('`items.*.extras.*.quantity` 必須為數字格式'),
 
     // 驗證「配料」金額
-    body('items.*.extras.*.price')
+    body('items.*.extrasData.*.price')
       .exists() // 欄位存在
       .withMessage('欄位 `items.*.extras.*.price` 必填')
       .bail() // 不可為空
@@ -225,8 +229,8 @@ const validation = {
             reqProductItem
 
           const reqProductItemExtrasTotalPrice =
-            reqProductItem.extras.length > 0
-              ? reqProductItem.extras.reduce(
+            reqProductItem.extrasData.length > 0
+              ? reqProductItem.extrasData.reduce(
                   (acc, cur) => (acc += cur.price),
                   0
                 )
@@ -510,30 +514,56 @@ const getOrderList = catchAsync(async (req, res) => {
     return { createAt: 1 }
   }
 
-  const orderList = await getOrderListQuery
+  let orderList = await getOrderListQuery
     .populate({
       path: 'items',
-      populate: {
-        path: 'product',
-        populate: {
-          path: 'extras',
+      populate: [
+        {
+          path: 'product',
+          populate: {
+            path: 'extras',
+          },
         },
-      },
-    })
-    .populate({
-      path: 'items',
-      populate: {
-        path: 'extras',
-        populate: {
-          path: 'extraItem',
+        {
+          path: 'extras',
           select: '-createdAt -updatedAt',
         },
-      },
+        {
+          path: 'extrasData',
+          populate: {
+            path: 'extraItem',
+            select: '-createdAt -updatedAt',
+          },
+        },
+      ],
     })
     .limit(req.query.limit - 0)
     .skip(req.query.offset - 0)
     .sort(sort())
     .lean()
+
+  // 遍歷 orderList 進行條件填充
+  orderList.forEach((order) => {
+    order.items.forEach((item) => {
+      let newExtrasData = []
+      if (item.extras.length > 0) {
+        newExtrasData = item.extras.map((extraItem) => {
+          if (!extraItem.extraItem) {
+            return {
+              extraItem: extraItem,
+              quantity: 1,
+              price: extraItem.price,
+            }
+          }
+        })
+      } else if (item.extrasData) {
+        if (item.extrasData.length > 0)
+          newExtrasData = item.extrasData.map((item) => item)
+      }
+
+      item.extras = newExtrasData
+    })
+  })
 
   successResponse({ res, data: orderList })
 })
@@ -541,19 +571,19 @@ const getOrderList = catchAsync(async (req, res) => {
 const createOrder = catchAsync(async (req, res) => {
   let computedItemsData = req.body.items.reduce((acc, cur) => {
     let matchCurExtrasNum = 0
-    const curExtrasLength = cur.extras.length
+    const curExtrasLength = cur.extrasData.length
     let sameItem = false
 
     if (curExtrasLength > 0) {
-      cur.extras.forEach((curExtra) => {
+      cur.extrasData.forEach((curExtra) => {
         acc.forEach((accItem) => {
-          accItem.extras.forEach((itemExtra) => {
+          accItem.extrasData.forEach((itemExtra) => {
             if (itemExtra === curExtra) matchCurExtrasNum++
           })
 
           if (
             matchCurExtrasNum === curExtrasLength &&
-            accItem.extras.length === curExtrasLength &&
+            accItem.extrasData.length === curExtrasLength &&
             accItem.product === cur.product
           ) {
             sameItem = true
@@ -563,7 +593,7 @@ const createOrder = catchAsync(async (req, res) => {
       })
     } else {
       acc
-        .filter((accItem) => accItem.extras.length < 1)
+        .filter((accItem) => accItem.extrasData.length < 1)
         .forEach((item) => {
           if (item.product === cur.product && item.quantity === cur.quantity) {
             sameItem = true
@@ -607,6 +637,7 @@ const createOrder = catchAsync(async (req, res) => {
 
   successResponse({ res, statusCode: 201, data: createdOrder })
 })
+
 const createOrderItem = catchAsync(async (req, res) => {
   res.send('createOrderItem')
 })
