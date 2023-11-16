@@ -18,18 +18,25 @@ const ordersSchema = mongoose.Schema(
           },
           extras: [
             {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Extra',
+              required: [true, '欄位 `item.extras` ExtrasId 必填'],
+            },
+          ],
+          extrasData: [
+            {
               extraItem: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'Extra',
-                required: [true, '欄位 `items.extraId` 必填'],
+                required: [true, '欄位 `items.extrasData.extraItem` 必填'],
               },
               quantity: {
                 type: Number,
-                required: [true, '欄位 `extras.quantity` 必填'],
+                required: [true, '欄位 `extras.extrasData.quantity` 必填'],
               },
               price: {
                 type: Number,
-                required: [true, '欄位 `extras.price` 必填'],
+                required: [true, '欄位 `extras.extrasData.price` 必填'],
               },
             },
           ],
