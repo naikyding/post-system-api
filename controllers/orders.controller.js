@@ -406,7 +406,7 @@ const validation = {
         },
         {
           $set: {
-            'items.$.extras': req.body.extras,
+            'items.$.extrasData': req.body.extras,
             'items.$.price': updateItemPrice,
             totalPrice: updateTotalPrice,
           },
