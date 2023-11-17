@@ -148,7 +148,7 @@ const validation = {
       .isIn([0, '0'])
       .withMessage('`items.*.quantity` 不可為 0'),
 
-    body('items.extras')
+    body('items.extras.*')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `items.extras id`'),
 
@@ -167,6 +167,8 @@ const validation = {
 
         if (matchItems.length !== extrasLength)
           throw new Error('`extras` 中，有不存在的 ID')
+
+        return true
       }),
 
     body('items.*.extrasData.*.quantity')
