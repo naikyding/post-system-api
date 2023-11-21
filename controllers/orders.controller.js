@@ -83,6 +83,173 @@ const validation = {
         if (!matchItem) throw new Error('`customer id` 不存在')
       }),
 
+    // 驗證配料加總金額
+    body('items.*.extrasData')
+      .isArray()
+      .bail()
+      .withMessage('欄位 `items.*.extras` 必須為陣列')
+      .custom(async (extras) => {
+        console.log('extras 驗證')
+
+        const extraItemsId = extras.map((item) => item.extraItem)
+
+        const matchExtrasItems = await extrasModel
+          .find({
+            _id: {
+              $in: extraItemsId,
+            },
+          })
+          .select('-agents -createdAt -updatedAt')
+          .exec()
+
+        extras.forEach((extraItemContent) => {
+          const matchItem = matchExtrasItems.find(
+            (item) => item._id == extraItemContent.extraItem
+          )
+
+          const { name: matchItemName, price: matchItemPrice } = matchItem
+          const { quantity: reqExtraItemQuantity, price: reqExtraItemPrice } =
+            extraItemContent
+          const computedPrice = matchItemPrice * reqExtraItemQuantity
+
+          if (reqExtraItemPrice !== computedPrice)
+            throw new Error(
+              `配料「${matchItemName}」金額加總錯誤!(送出金額為 $${reqExtraItemPrice}，正確金額該是 $${computedPrice})`
+            )
+        })
+      }),
+
+    // 驗證 items 子項目
+    body('items.*.product')
+      .exists() // 欄位存在
+      .withMessage('欄位 `items.*.product` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.*.product id`')
+      .bail() // id 不存在
+      .custom(async (id, { req }) => {
+        const matchProductItem = await productsModel.findById(id)
+
+        if (!matchProductItem) throw new Error('`items.*.product id` 不存在')
+        req.matchProductItem = matchProductItem
+      }),
+
+    body('items.*.quantity')
+      .exists() // 欄位存在
+      .withMessage('欄位 `items.*.quantity` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`items.*.quantity` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.quantity` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`items.*.quantity` 不可為 0'),
+
+    body('items.extras.*')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.extras id`'),
+
+    body('items.*.extrasData.*.extraItem')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.*.extraItem id`')
+      .bail() // id 不存在
+      .custom(async (extrasIdArray) => {
+        const extrasLength =
+          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
+
+        // 查詢是否「包含」id 群
+        const matchItems = await extrasModel.find({
+          _id: { $in: extrasIdArray },
+        })
+
+        if (matchItems.length !== extrasLength)
+          throw new Error('`extras` 中，有不存在的 ID')
+
+        return true
+      }),
+
+    body('items.*.extrasData.*.quantity')
+      .exists() // 欄位存在
+      .withMessage('欄位 `items.*.extras.*.quantity` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`items.*.extras.*.quantity` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.quantity` 必須為數字格式'),
+
+    // 驗證「配料」金額
+    body('items.*.extrasData.*.price')
+      .exists() // 欄位存在
+      .withMessage('欄位 `items.*.extras.*.price` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`items.*.extras.*.price` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.price` 必須為數字格式'),
+
+    // 驗證訂單「單項」金額
+    body('items.*.price')
+      .exists() // 欄位存在
+      .withMessage('欄位 `items.*.price` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`items.*.price` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.price` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`items.*.price` 不可為 0')
+      .bail() // id 不存在
+      .custom(async (price, { req }) => {
+        // console.log(req.matchProductItem)
+        // console.log(`驗證訂單「單項」金額 items.price`)
+      }),
+
+    body('items')
+      .exists() // 欄位存在
+      .bail() // id 不存在
+      .custom(async (item, { req }) => {
+        const productIdAry = item.map((item) => item.product)
+
+        const matchProductItems = await productsModel
+          .find({
+            _id: { $in: productIdAry },
+          })
+          .exec()
+
+        item.forEach((reqProductItem) => {
+          const { name: originalProductName, price: originalProductPrice } =
+            matchProductItems.find((item) => item._id == reqProductItem.product)
+          const { quantity: reqProductQuantity, price: reqProductPrice } =
+            reqProductItem
+
+          const reqProductItemExtrasTotalPrice =
+            reqProductItem.extrasData.length > 0
+              ? reqProductItem.extrasData.reduce(
+                  (acc, cur) => (acc += cur.price),
+                  0
+                )
+              : 0
+
+          const computedTotal =
+            (originalProductPrice + reqProductItemExtrasTotalPrice) *
+            reqProductQuantity
+
+          if (reqProductPrice !== computedTotal)
+            throw new Error(
+              `訂單項目(${originalProductName})金額加總錯誤，收到 ${reqProductPrice} (應為 ${computedTotal})`
+            )
+        })
+      }),
+
+    // 驗證訂單「總金額」
     body('totalPrice')
       .exists() // 欄位存在
       .withMessage('欄位 `totalPrice` 必填')
@@ -97,73 +264,21 @@ const validation = {
       .isIn([0, '0'])
       .withMessage('`totalPrice` 不可為 0')
       .bail()
-      .custom((totalPrice, { req }) => {
-        const items = req.body.items
+      .custom((totalPrice, { req: { body } }) => {
+        console.log(`驗證訂單「總金額」 totalPrice`)
+
+        const { items } = body
+
         let allPrice = items.reduce((acc, cur) => {
           return (acc += cur.price)
         }, 0)
 
         if (allPrice !== totalPrice)
           throw new Error(
-            `totalPrice 金額 $${totalPrice}  與 items 計算金額 $${allPrice} 不符`
+            `totalPrice 金額 $${totalPrice}  與計算金額 $${allPrice} 不符`
           )
 
         return true
-      }),
-
-    // 驗證 items 子項目
-    body('items.*.product')
-      .exists() // 欄位存在
-      .withMessage('欄位 `items.*.product` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.product id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await productsModel.findById(id)
-        if (!matchItem) throw new Error('`items.*.product id` 不存在')
-      }),
-    body('items.*.price')
-      .exists() // 欄位存在
-      .withMessage('欄位 `items.*.price` 必填')
-      .bail() // 不可為空
-      .notEmpty()
-      .withMessage('`items.*.price` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.price` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.price` 不可為 0'),
-    body('items.*.quantity')
-      .exists() // 欄位存在
-      .withMessage('欄位 `items.*.quantity` 必填')
-      .bail() // 不可為空
-      .notEmpty()
-      .withMessage('`items.*.quantity` 不可為空值')
-      .bail()
-      .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`items.*.quantity` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`items.*.quantity` 不可為 0'),
-    body('items.*.extras')
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `items.*.extras id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
-
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
-
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
       }),
   ],
 
@@ -218,13 +333,71 @@ const validation = {
         req.matchOrderItem = matchItem
       }),
 
-    body('extrasTotal').custom(async (extrasTotal, { req }) => {
-      const productItem = await productsModel.findById(
+    // // 驗證「配料」金額
+    body('extras.*.price')
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.price` 必須為數字格式'),
+
+    // // 驗證「配料」數量
+    body('extras.*.quantity')
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`extras.*.quantity` 必須為數字格式'),
+
+    // 驗証配料各項金額是否正確
+    body('extras')
+      .isArray()
+      .withMessage('`extras` 應為陣列')
+      .custom(async (extras) => {
+        const extraItemIds = extras.map((item) => item.extraItem)
+        const extrasData = await extrasModel.find({
+          _id: { $in: extraItemIds },
+        })
+
+        extras.forEach((item) => {
+          const originExtraItem = extrasData.find(
+            (originalExtraItem) => originalExtraItem._id == item.extraItem
+          )
+
+          const originExtraItemPrice = originExtraItem.price
+          const computedTotal = item.quantity * originExtraItemPrice
+
+          if (item.price !== computedTotal)
+            throw new Error(
+              `配料 「${originExtraItem.name}」 金額計算錯誤，收到 $${item.price} (應為 $${computedTotal} / ${item.quantity} * ${originExtraItemPrice})`
+            )
+        })
+      }),
+
+    // 寫入資料庫
+    body('totalPrice').custom(async (totalPrice, { req }) => {
+      console.log('totalPrice')
+
+      // 項目的金額 (舊)
+      const oldOrderItemPrice = req.matchOrderItem.price
+
+      // 配料總金額 (新)
+      const updateExtrasPrice = req.body.extras.reduce(
+        (acc, cur) => (acc += cur.price),
+        0
+      )
+
+      const originProduct = await productsModel.findById(
         req.matchOrderItem.product
       )
 
-      const newProductItemPrice =
-        (productItem.price + extrasTotal) * req.matchOrderItem.quantity
+      // 產品金額 (原)
+      const originProductPrice = originProduct.price
+
+      // 訂單總金額 (舊)
+      const oldOrderListTotal = req.matchOrder.totalPrice
+
+      // 訂單「項目」更新金額
+      const updateItemPrice =
+        (originProductPrice + updateExtrasPrice) * req.matchOrderItem.quantity
+
+      // 訂單更新金額
+      const updateTotalPrice =
+        oldOrderListTotal - oldOrderItemPrice + updateItemPrice
 
       const res = await ordersModel.findOneAndUpdate(
         {
@@ -233,12 +406,9 @@ const validation = {
         },
         {
           $set: {
-            'items.$.extras': req.body.extras,
-            'items.$.price': newProductItemPrice,
-            totalPrice:
-              req.matchOrder.totalPrice -
-              req.matchOrderItem.price +
-              newProductItemPrice,
+            'items.$.extrasData': req.body.extras,
+            'items.$.price': updateItemPrice,
+            totalPrice: updateTotalPrice,
           },
         },
         {
@@ -303,13 +473,16 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const { status, paid: isPaid, from, to, agent } = req.query
+  const { status, paid: isPaid, from, to, agent, paymentType } = req.query
 
   let filterContent = {}
 
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
   if (agent) filterContent['agent'] = agent
+  if (paymentType)
+    filterContent['paymentType'] =
+      paymentType === 'linePay' ? 'Line Pay' : paymentType
 
   if (from && to) {
     // 00:00 ~ 23:59 換台灣時間
@@ -343,26 +516,56 @@ const getOrderList = catchAsync(async (req, res) => {
     return { createAt: 1 }
   }
 
-  const orderList = await getOrderListQuery
+  let orderList = await getOrderListQuery
     .populate({
       path: 'items',
-      populate: {
-        path: 'product',
-        populate: {
-          path: 'extras',
+      populate: [
+        {
+          path: 'product',
+          populate: {
+            path: 'extras',
+          },
         },
-      },
-    })
-    .populate({
-      path: 'items',
-      populate: {
-        path: 'extras',
-      },
+        {
+          path: 'extras',
+          select: '-createdAt -updatedAt',
+        },
+        {
+          path: 'extrasData',
+          populate: {
+            path: 'extraItem',
+            select: '-createdAt -updatedAt',
+          },
+        },
+      ],
     })
     .limit(req.query.limit - 0)
     .skip(req.query.offset - 0)
     .sort(sort())
     .lean()
+
+  // 遍歷 orderList 進行條件填充
+  orderList.forEach((order) => {
+    order.items.forEach((item) => {
+      let newExtrasData = []
+      if (item.extras.length > 0) {
+        newExtrasData = item.extras.map((extraItem) => {
+          if (!extraItem.extraItem) {
+            return {
+              extraItem: extraItem,
+              quantity: 1,
+              price: extraItem.price,
+            }
+          }
+        })
+      } else if (item.extrasData) {
+        if (item.extrasData.length > 0)
+          newExtrasData = item.extrasData.map((item) => item)
+      }
+
+      item.extras = newExtrasData
+    })
+  })
 
   successResponse({ res, data: orderList })
 })
@@ -370,19 +573,19 @@ const getOrderList = catchAsync(async (req, res) => {
 const createOrder = catchAsync(async (req, res) => {
   let computedItemsData = req.body.items.reduce((acc, cur) => {
     let matchCurExtrasNum = 0
-    const curExtrasLength = cur.extras.length
+    const curExtrasLength = cur.extrasData.length
     let sameItem = false
 
     if (curExtrasLength > 0) {
-      cur.extras.forEach((curExtra) => {
+      cur.extrasData.forEach((curExtra) => {
         acc.forEach((accItem) => {
-          accItem.extras.forEach((itemExtra) => {
+          accItem.extrasData.forEach((itemExtra) => {
             if (itemExtra === curExtra) matchCurExtrasNum++
           })
 
           if (
             matchCurExtrasNum === curExtrasLength &&
-            accItem.extras.length === curExtrasLength &&
+            accItem.extrasData.length === curExtrasLength &&
             accItem.product === cur.product
           ) {
             sameItem = true
@@ -392,7 +595,7 @@ const createOrder = catchAsync(async (req, res) => {
       })
     } else {
       acc
-        .filter((accItem) => accItem.extras.length < 1)
+        .filter((accItem) => accItem.extrasData.length < 1)
         .forEach((item) => {
           if (item.product === cur.product && item.quantity === cur.quantity) {
             sameItem = true
@@ -427,8 +630,16 @@ const createOrder = catchAsync(async (req, res) => {
     items: computedItemsData,
   })
 
+  // 填充響應資料
+  await ordersModel.populate(createdOrder, {
+    path: 'items.extras.extraItem',
+    model: extrasModel,
+    select: '-agents -createAt -createdAt -updatedAt',
+  })
+
   successResponse({ res, statusCode: 201, data: createdOrder })
 })
+
 const createOrderItem = catchAsync(async (req, res) => {
   res.send('createOrderItem')
 })
