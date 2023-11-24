@@ -52,6 +52,10 @@ const ordersSchema = mongoose.Schema(
             type: Boolean,
             default: false,
           },
+          notes: {
+            type: String,
+            default: '',
+          },
         },
       ],
       default: [],
