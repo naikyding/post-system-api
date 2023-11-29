@@ -4,7 +4,8 @@ const catchAsync =
   (func, errorFunc = errorCallback) =>
   async (req, res, next) => {
     try {
-      await func(req, res, next)
+      const result = await func(req, res, next)
+      return result
     } catch (errors) {
       console.log('catchAsync')
       errorFunc({ req, res, next, errors })
