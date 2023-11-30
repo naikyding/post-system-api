@@ -56,6 +56,12 @@ const ordersSchema = mongoose.Schema(
             type: String,
             default: '',
           },
+          markers: [
+            {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Markers',
+            },
+          ],
         },
       ],
       default: [],
