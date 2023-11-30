@@ -537,6 +537,10 @@ const getOrderList = catchAsync(async (req, res) => {
             select: '-createdAt -updatedAt',
           },
         },
+        {
+          path: 'markers',
+          select: '-createdAt -updatedAt -agent',
+        },
       ],
     })
     .limit(req.query.limit - 0)
