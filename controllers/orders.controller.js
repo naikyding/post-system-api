@@ -1,6 +1,12 @@
 const catchAsync = require('../utils/catchAsync')
 const { successResponse } = require('../utils/responseHandlers')
-const { body, param, query, validationResult } = require('express-validator')
+const {
+  body,
+  param,
+  query,
+  validationResult,
+  header,
+} = require('express-validator')
 
 const agentsModel = require('../models/agents.model')
 const customersModel = require('../models/customers.model')
@@ -470,6 +476,31 @@ const validation = {
         if (!matchOrder) throw new Error('`id` 不存在')
       }),
   ],
+
+  getWaitingListFromOrderList: [
+    header('mc-agent-id')
+      .exists() // 欄位存在
+      .withMessage('欄位 `agent` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `agent id`')
+      .bail()
+      .custom(async (agentId) => {
+        const matchAgent = await agentsModel.findById(agentId)
+        if (!matchAgent) throw new Error(`無此商家!`)
+      }),
+
+    query('from')
+      .optional()
+      .isISO8601()
+      .withMessage('query `from` 日期格式錯誤')
+      .toDate(), // 驗證後轉為 Date 物件
+    query('to')
+      .optional()
+      .isISO8601()
+      .withMessage('query `to` 日期格式錯誤')
+      .toDate(), // 驗證後轉為 Date 物件
+  ],
 }
 
 const getOrderList = catchAsync(async (req, res) => {
@@ -485,6 +516,7 @@ const getOrderList = catchAsync(async (req, res) => {
       paymentType === 'linePay' ? 'Line Pay' : paymentType
 
   if (from && to) {
+    console.log(from, to)
     // 00:00 ~ 23:59 換台灣時間
     from.setHours(0 - 8, 0, 0, 0)
     to.setHours(23 - 8, 59, 59, 999)
@@ -654,6 +686,117 @@ const updateOrderItem = getOrderList
 const deleteOrder = getOrderList
 const deleteOrderItem = getOrderList
 
+const getWaitingListFromOrderList = catchAsync(async (req, res) => {
+  const { mobile, from, to } = req.query
+  const agentId = req.headers['mc-agent-id']
+  const filter = {
+    // status: 'pending'
+  }
+
+  // if (mobile) filter['mobileNoThreeDigits'] = mobile
+  if (agentId) filter['agent'] = agentId
+
+  const formatFrom = from || new Date()
+  const formatTo = to || new Date()
+
+  // 台灣時間
+  formatFrom.setHours(0 - 8, 0, 0, 0)
+  formatTo.setHours(23 - 8, 59, 59, 999)
+
+  filter['createdAt'] = {
+    $gte: formatFrom,
+    $lte: formatTo,
+  }
+  const orderList = await ordersModel.find(filter).populate({
+    path: 'items',
+    populate: [{ path: 'product', select: 'name type image price createdAt' }],
+  })
+
+  const orderListAll = orderList.reduce(
+    (acc, cur) => {
+      acc[cur.status] = [...acc[cur.status], cur]
+      return acc
+    },
+    {
+      pending: [],
+      completed: [],
+      cancelled: [],
+    }
+  )
+
+  let returnIndex
+  let formatData
+
+  const matchInPendingList = orderListAll.pending.filter(
+    (item) => item.mobileNoThreeDigits === mobile
+  )
+  if (mobile && matchInPendingList.length < 1) {
+    formatData = { status: 'completed' }
+
+    const matchCompletedItem = orderListAll.completed.filter(
+      (item) => item.mobileNoThreeDigits === mobile
+    )
+
+    if (matchCompletedItem.length < 1) {
+      return successResponse({
+        res,
+        data: '查無此訂單',
+      })
+    }
+
+    formatData.items = matchCompletedItem
+  } else {
+    formatData = orderListAll.pending.reduce(
+      (acc, cur, index) => {
+        if (mobile && cur.mobileNoThreeDigits === mobile) returnIndex = index
+
+        if (returnIndex === undefined || index <= returnIndex)
+          acc.items = [...acc.items, cur]
+
+        if (returnIndex !== undefined && index >= returnIndex) return acc
+
+        acc.itemQuantity += cur.items.reduce((acc, cur) => {
+          if (cur.product.type === '塑膠提袋') return acc
+          return (acc += cur.quantity)
+        }, 0)
+
+        if (
+          cur.items.length ===
+          cur.items.filter((item) => item.product.type === '塑膠提袋').length
+        )
+          return acc
+        acc.listQuantity += 1
+
+        return acc
+      },
+      {
+        status: 'pending',
+        items: [],
+        listQuantity: 0, // 訂單數
+        itemQuantity: 0, // 商品數
+      }
+    )
+
+    // 二個生產單位，可同時生產
+    const computedQuantity =
+      formatData.itemQuantity < 2
+        ? formatData.itemQuantity
+        : formatData.itemQuantity < 4
+        ? Math.ceil(formatData.itemQuantity / 2)
+        : (formatData.itemQuantity - 1) / 2
+
+    formatData.range = {
+      min: Math.round(computedQuantity * 5), // 最少一單位 5 分鐘
+      max: Math.round(computedQuantity * 7), // 最多一單位 7 分鐘
+    }
+  }
+
+  successResponse({
+    res,
+    data: formatData,
+  })
+})
+
 module.exports = {
   validation,
 
@@ -664,4 +807,5 @@ module.exports = {
   updateOrderItem,
   deleteOrder,
   deleteOrderItem,
+  getWaitingListFromOrderList,
 }

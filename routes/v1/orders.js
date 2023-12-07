@@ -13,6 +13,7 @@ const {
   createOrderItem,
   deleteOrder,
   deleteOrderItem,
+  getWaitingListFromOrderList,
 } = require('../../controllers/orders.controller')
 
 router.get('/', auth, validation.getOrderList, validateHandler, getOrderList)
@@ -48,6 +49,15 @@ router.delete(
   validation.deleteOrderItem,
   validateHandler,
   deleteOrderItem
+)
+
+// waiting 等待查詢
+router.get(
+  '/waiting',
+  auth,
+  validation.getWaitingListFromOrderList,
+  validateHandler,
+  getWaitingListFromOrderList
 )
 
 module.exports = router
