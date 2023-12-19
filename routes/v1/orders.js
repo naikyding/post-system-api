@@ -54,7 +54,6 @@ router.delete(
 // waiting 等待查詢
 router.get(
   '/waiting',
-  auth,
   validation.getWaitingListFromOrderList,
   validateHandler,
   getWaitingListFromOrderList
