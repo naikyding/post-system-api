@@ -609,8 +609,22 @@ const getOrderList = catchAsync(async (req, res) => {
 const createOrder = catchAsync(async (req, res) => {
   let computedItemsData = req.body.items.reduce((acc, cur) => {
     let matchCurExtrasNum = 0
+    let matchCurMarkersNum = 0
+
     const curExtrasLength = cur.extrasData.length
+    const curMarkersLength = cur.markers.length
+
     let sameItem = false
+
+    if (curMarkersLength > 0) {
+      cur.markers.forEach((curMarkerItem) => {
+        acc.forEach((accItem) => {
+          accItem.markers.forEach((accMarkersItem) => {
+            if (accMarkersItem === curMarkerItem) matchCurMarkersNum++
+          })
+        })
+      })
+    }
 
     if (curExtrasLength > 0) {
       cur.extrasData.forEach((curExtra) => {
@@ -622,7 +636,8 @@ const createOrder = catchAsync(async (req, res) => {
           if (
             matchCurExtrasNum === curExtrasLength &&
             accItem.extrasData.length === curExtrasLength &&
-            accItem.product === cur.product
+            accItem.product === cur.product &&
+            matchCurMarkersNum === curMarkersLength
           ) {
             sameItem = true
             accItem.quantity++
@@ -633,9 +648,12 @@ const createOrder = catchAsync(async (req, res) => {
       acc
         .filter((accItem) => accItem.extrasData.length < 1)
         .forEach((item) => {
-          if (item.product === cur.product && item.quantity === cur.quantity) {
+          if (
+            item.product === cur.product &&
+            matchCurMarkersNum === curMarkersLength
+          ) {
             sameItem = true
-            item.quantity++
+            item.quantity += cur.quantity
           }
         })
     }
