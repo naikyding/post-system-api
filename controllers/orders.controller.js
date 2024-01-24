@@ -742,76 +742,101 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
     }
   )
 
-  let returnIndex
-  let formatData
-
-  const matchInPendingList = orderListAll.pending.filter(
-    (item) => item.mobileNoThreeDigits === mobile
-  )
-  if (mobile && matchInPendingList.length < 1) {
-    formatData = { status: 'completed' }
-
-    const matchCompletedItem = orderListAll.completed.filter(
-      (item) => item.mobileNoThreeDigits === mobile
-    )
-
-    if (matchCompletedItem.length < 1) {
-      return successResponse({
-        res,
-        data: '查無此訂單',
-      })
-    }
-
-    formatData.items = matchCompletedItem
-  } else {
-    formatData = orderListAll.pending.reduce(
-      (acc, cur, index) => {
-        if (mobile && cur.mobileNoThreeDigits === mobile) returnIndex = index
-
-        if (returnIndex === undefined || index <= returnIndex)
-          acc.items = [...acc.items, cur]
-
-        if (returnIndex !== undefined && index >= returnIndex) return acc
-
-        acc.itemQuantity += cur.items.reduce((acc, cur) => {
-          if (cur.product.type === '塑膠提袋') return acc
-          return (acc += cur.quantity)
-        }, 0)
-
-        if (
-          cur.items.length ===
-          cur.items.filter((item) => item.product.type === '塑膠提袋').length
-        )
-          return acc
-        acc.listQuantity += 1
-
-        return acc
-      },
-      {
-        status: 'pending',
-        items: [],
-        listQuantity: 0, // 訂單數
-        itemQuantity: 0, // 商品數
-      }
-    )
-
+  // 運算時間方法
+  function pendingComputed(itemsQuantity) {
     // 二個生產單位，可同時生產
     const computedQuantity =
-      formatData.itemQuantity < 2
-        ? formatData.itemQuantity
-        : formatData.itemQuantity < 4
-        ? Math.ceil(formatData.itemQuantity / 2)
-        : (formatData.itemQuantity - 1) / 2
+      itemsQuantity < 2
+        ? itemsQuantity
+        : itemsQuantity < 4
+        ? Math.ceil(itemsQuantity / 2)
+        : (itemsQuantity - 1) / 2
 
-    formatData.range = {
-      min: Math.round(computedQuantity * 5), // 最少一單位 5 分鐘
-      max: Math.round(computedQuantity * 7), // 最多一單位 7 分鐘
+    return {
+      itemsQuantity: itemsQuantity, // 總片數
+      // 等待時間
+      range: {
+        min: Math.round(computedQuantity * 5), // 最少一單位 5 分鐘
+        max: Math.round(computedQuantity * 7), // 最多一單位 7 分鐘
+      },
     }
   }
 
-  successResponse({
+  // 預設 (沒有手機號碼)
+  if (!mobile)
+    return successResponse({
+      res,
+      data: {
+        pending: [
+          {
+            content: null,
+            ...pendingComputed(
+              orderListAll['pending'].reduce((acc, cur) => {
+                return (acc += cur.items.reduce((acc, cur) => {
+                  if (cur.product.type !== '塑膠提袋')
+                    return (acc += cur.quantity)
+                  return acc
+                }, 0))
+              }, 0)
+            ),
+          },
+        ],
+      },
+    })
+
+  // 有手機號
+  const matchInPendingList = orderListAll.pending.filter(
+    (item) => item.mobileNoThreeDigits === mobile
+  )
+
+  const matchInCompletedList = orderListAll.completed.filter(
+    (item) => item.mobileNoThreeDigits === mobile
+  )
+
+  // -- 沒資料
+  if (matchInPendingList.length < 1 && matchInCompletedList.length < 1)
+    return successResponse({
+      res,
+      data: '查無此訂單',
+    })
+
+  // -- 有資料
+
+  // 從清單比對手機
+  function mappingListByMobile(mobile, list) {
+    let waiting = {
+      listQuantity: 0,
+      itemsQuantity: 0,
+    }
+
+    return list.reduce((acc, cur) => {
+      if (mobile === cur.mobileNoThreeDigits) {
+        acc = [
+          ...acc,
+          {
+            content: cur,
+            listQuantity: waiting.listQuantity, // 訂單數
+            ...pendingComputed(waiting.itemsQuantity), // 片數、時間
+          },
+        ]
+      }
+
+      waiting.listQuantity++
+      waiting.itemsQuantity += cur.items.reduce((acc, cur) => {
+        if (cur.product.type !== '塑膠提袋') return (acc += cur.quantity)
+        return acc
+      }, 0)
+
+      return acc
+    }, [])
+  }
+
+  return successResponse({
     res,
-    data: formatData,
+    data: {
+      pending: [...mappingListByMobile(mobile, orderListAll['pending'])],
+      completed: matchInCompletedList,
+    },
   })
 })
 
