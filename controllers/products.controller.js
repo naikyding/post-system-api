@@ -266,8 +266,11 @@ const getProducts = catchAsync(async (req, res) => {
 
   if (formatAllProducts) {
     formatAllProducts = [
-      ...formatAllProducts.filter((item) => item.type !== '塑膠提袋'),
+      ...formatAllProducts.filter(
+        (item) => item.type !== '塑膠提袋' && item.type !== '其它'
+      ),
       formatAllProducts.find((item) => item.type === '塑膠提袋'),
+      formatAllProducts.find((item) => item.type === '其它'),
     ]
   }
 
