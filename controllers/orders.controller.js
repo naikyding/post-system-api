@@ -744,13 +744,13 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
 
   // 運算時間方法
   function pendingComputed(itemsQuantity) {
-    // 二個生產單位，可同時生產
+    // 三個生產單位，可同時生產
     const computedQuantity =
-      itemsQuantity < 2
+      itemsQuantity < 3
         ? itemsQuantity
-        : itemsQuantity < 4
-        ? Math.ceil(itemsQuantity / 2)
-        : (itemsQuantity - 1) / 2
+        : itemsQuantity < 6
+        ? Math.ceil(itemsQuantity / 3)
+        : (itemsQuantity - 1) / 3
 
     return {
       itemsQuantity: itemsQuantity, // 總片數
