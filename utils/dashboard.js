@@ -22,6 +22,14 @@ const getAllPaymentTypeTotal = (orderData) => {
         matchItem['orderQuantity'] += 1
         matchItem['itemQuantity'] += formatQuantity['item']
         matchItem['bagQuantity'] += formatQuantity['bag']
+        matchItem['data'] = [
+          ...matchItem['data'],
+          {
+            createdAt: cur.createdAt,
+            total: cur.totalPrice,
+            mobile: cur.mobileNoThreeDigits,
+          },
+        ]
       } else {
         init[cur.status] = [
           ...init[cur.status],
@@ -31,6 +39,13 @@ const getAllPaymentTypeTotal = (orderData) => {
             orderQuantity: 1,
             itemQuantity: formatQuantity['item'],
             bagQuantity: formatQuantity['bag'],
+            data: [
+              {
+                createdAt: cur.createdAt,
+                total: cur.totalPrice,
+                mobile: cur.mobileNoThreeDigits,
+              },
+            ],
           },
         ]
       }
@@ -44,6 +59,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
         {
           type: 'Line Pay',
@@ -51,6 +67,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
       ],
       pending: [
@@ -60,6 +77,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
         {
           type: 'Line Pay',
@@ -67,6 +85,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
       ],
       cancelled: [
@@ -76,6 +95,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
         {
           type: 'Line Pay',
@@ -83,6 +103,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           itemQuantity: 0,
           bagQuantity: 0,
           total: 0,
+          data: [],
         },
       ],
     }
