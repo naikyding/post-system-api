@@ -434,6 +434,7 @@ const validation = {
       .bail()
       .isBoolean()
       .withMessage('query `paid` 應為布林格式'),
+
     body('status')
       .optional()
       .notEmpty()
@@ -454,6 +455,7 @@ const validation = {
 
         return true
       }),
+
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
@@ -467,10 +469,12 @@ const validation = {
         if (errorsValidate.length > 0) return false
 
         // 更新資料
-        const { status, isPaid } = req.body
+        const { status, isPaid, paymentType } = req.body
+
         const matchOrder = await ordersModel.findByIdAndUpdate(id, {
           status, // 更新訂單狀態
           isPaid,
+          paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
         })
 
         if (!matchOrder) throw new Error('`id` 不存在')
