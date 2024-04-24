@@ -456,11 +456,201 @@ const validation = {
         return true
       }),
 
+    // 驗證數字
+
+    // 驗證配料加總金額
+    body('items.*.extrasData')
+      .optional()
+      .isArray()
+      .withMessage('欄位 `items.*.extrasData` 必須為陣列')
+      .custom(async (extras) => {
+        console.log('extras 驗證')
+
+        const extraItemsId = extras.map((item) => item.extraItem)
+
+        const matchExtrasItems = await extrasModel
+          .find({
+            _id: {
+              $in: extraItemsId,
+            },
+          })
+          .select('-agents -createdAt -updatedAt')
+          .exec()
+
+        extras.forEach((extraItemContent) => {
+          const matchItem = matchExtrasItems.find(
+            (item) => item._id == extraItemContent.extraItem
+          )
+
+          const { name: matchItemName, price: matchItemPrice } = matchItem
+          const { quantity: reqExtraItemQuantity, price: reqExtraItemPrice } =
+            extraItemContent
+          const computedPrice = matchItemPrice * reqExtraItemQuantity
+
+          if (reqExtraItemPrice !== computedPrice)
+            throw new Error(
+              `配料「${matchItemName}」金額加總錯誤!(送出金額為 $${reqExtraItemPrice}，正確金額該是 $${computedPrice})`
+            )
+        })
+      }),
+
+    // 驗證 items 子項目
+    body('items.*.product')
+      .optional()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.*.product id`')
+      .bail() // id 不存在
+      .custom(async (id, { req }) => {
+        const matchProductItem = await productsModel.findById(id)
+
+        if (!matchProductItem) throw new Error('`items.*.product id` 不存在')
+        req.matchProductItem = matchProductItem
+      }),
+
+    body('items.*.quantity')
+      .optional()
+      .notEmpty()
+      .withMessage('`items.*.quantity` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.quantity` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`items.*.quantity` 不可為 0'),
+
+    body('items.extras.*')
+      .optional()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.extras id`'),
+
+    body('items.*.extrasData.*.extraItem')
+      .optional()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `items.*.extraItem id`')
+      .bail() // id 不存在
+      .custom(async (extrasIdArray) => {
+        const extrasLength =
+          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
+
+        // 查詢是否「包含」id 群
+        const matchItems = await extrasModel.find({
+          _id: { $in: extrasIdArray },
+        })
+
+        if (matchItems.length !== extrasLength)
+          throw new Error('`extras` 中，有不存在的 ID')
+
+        return true
+      }),
+
+    body('items.*.extrasData.*.quantity')
+      .optional()
+      .notEmpty()
+      .withMessage('`items.*.extras.*.quantity` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.quantity` 必須為數字格式'),
+
+    // 驗證「配料」金額
+    body('items.*.extrasData.*.price')
+      .optional()
+      .notEmpty()
+      .withMessage('`items.*.extras.*.price` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.extras.*.price` 必須為數字格式'),
+
+    // 驗證訂單「單項」金額
+    body('items.*.price')
+      .optional()
+      .notEmpty()
+      .withMessage('`items.*.price` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`items.*.price` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`items.*.price` 不可為 0')
+      .bail() // id 不存在
+      .custom(async (price, { req }) => {
+        // console.log(req.matchProductItem)
+        // console.log(`驗證訂單「單項」金額 items.price`)
+      }),
+
+    body('items')
+      .optional()
+      .custom(async (item, { req }) => {
+        const productIdAry = item.map((item) => item.product)
+
+        const matchProductItems = await productsModel
+          .find({
+            _id: { $in: productIdAry },
+          })
+          .exec()
+
+        item.forEach((reqProductItem) => {
+          const { name: originalProductName, price: originalProductPrice } =
+            matchProductItems.find((item) => item._id == reqProductItem.product)
+          const { quantity: reqProductQuantity, price: reqProductPrice } =
+            reqProductItem
+
+          const reqProductItemExtrasTotalPrice =
+            reqProductItem.extrasData.length > 0
+              ? reqProductItem.extrasData.reduce(
+                  (acc, cur) => (acc += cur.price),
+                  0
+                )
+              : 0
+
+          const computedTotal =
+            (originalProductPrice + reqProductItemExtrasTotalPrice) *
+            reqProductQuantity
+
+          if (reqProductPrice !== computedTotal)
+            throw new Error(
+              `訂單項目(${originalProductName})金額加總錯誤，收到 ${reqProductPrice} (應為 ${computedTotal})`
+            )
+        })
+      }),
+
+    // 驗證訂單「總金額」
+    body('totalPrice')
+      .optional()
+      .notEmpty()
+      .withMessage('`totalPrice` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`totalPrice` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`totalPrice` 不可為 0')
+      .bail()
+      .custom((totalPrice, { req: { body } }) => {
+        console.log(`驗證訂單「總金額」 totalPrice`)
+
+        const { items } = body
+
+        let allPrice = items.reduce((acc, cur) => {
+          return (acc += cur.price)
+        }, 0)
+
+        if (allPrice !== totalPrice)
+          throw new Error(
+            `totalPrice 金額 $${totalPrice}  與計算金額 $${allPrice} 不符`
+          )
+
+        return true
+      }),
+
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
       .bail()
       .custom(async (id, { req }) => {
+        console.log('params id')
         const errorsValidate = validationResult(req)
           .formatWith((errors) => errors.msg)
           .array()
@@ -469,12 +659,24 @@ const validation = {
         if (errorsValidate.length > 0) return false
 
         // 更新資料
-        const { status, isPaid, paymentType } = req.body
+        const {
+          status,
+          isPaid,
+          paymentType,
+          mobileNoThreeDigits,
+          note,
+          totalPrice,
+          items,
+        } = req.body
 
         const matchOrder = await ordersModel.findByIdAndUpdate(id, {
           status, // 更新訂單狀態
           isPaid,
           paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
+          mobileNoThreeDigits,
+          note,
+          totalPrice,
+          items,
         })
 
         if (!matchOrder) throw new Error('`id` 不存在')
@@ -701,6 +903,7 @@ const createOrder = catchAsync(async (req, res) => {
 const createOrderItem = catchAsync(async (req, res) => {
   res.send('createOrderItem')
 })
+
 const updateOrderList = getOrderList
 
 const updateOrderItem = getOrderList
