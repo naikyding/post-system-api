@@ -90,8 +90,9 @@ const validation = {
 }
 
 const getExtras = catchAsync(async (req, res, next) => {
-  const resData = await extrasModel.find()
-  res.send(resData)
+  const extrasData = await extrasModel.find()
+
+  successResponse({ res, data: extrasData })
 })
 
 const createExtra = catchAsync(async (req, res, next) => {
