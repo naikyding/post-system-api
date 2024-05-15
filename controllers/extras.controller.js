@@ -98,7 +98,7 @@ const getExtras = catchAsync(async (req, res, next) => {
 const createExtra = catchAsync(async (req, res, next) => {
   const { name, description, price, type, agent } = req.body
 
-  const resData = await extrasModel.create({
+  const extrasData = await extrasModel.create({
     name,
     description,
     price,
@@ -106,7 +106,7 @@ const createExtra = catchAsync(async (req, res, next) => {
     agents: [agent],
   })
 
-  res.send(resData)
+  successResponse({ res, data: extrasData })
 })
 
 const deleteExtra = catchAsync(async (req, res, next) => {
