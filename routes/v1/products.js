@@ -9,6 +9,7 @@ const {
   getProducts,
   createProduct,
   deleteProduct,
+  updateProduct,
 
   createProductExtrasItem,
   deleteProductExtrasItem,
@@ -39,6 +40,14 @@ router.delete(
   validation.deleteProductExtrasItem,
   validateHandler,
   deleteProductExtrasItem
+)
+
+router.patch(
+  '/:id',
+  auth,
+  validation.updateProduct,
+  validateHandler,
+  updateProduct
 )
 
 module.exports = router
