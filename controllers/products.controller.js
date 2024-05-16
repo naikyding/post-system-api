@@ -2,6 +2,7 @@ const catchAsync = require('../utils/catchAsync')
 const productsModel = require('../models/products.model')
 const agentsModel = require('../models/agents.model')
 const extrasModel = require('../models/extras.model')
+const { ObjectId } = require('mongoose').Types
 
 const { successResponse } = require('../utils/responseHandlers')
 const { body, validationResult, param, header } = require('express-validator')
@@ -121,6 +122,100 @@ const validation = {
       }),
   ],
 
+  updateProduct: [
+    param('id')
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `id`')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await productsModel.findById(id)
+        if (!matchItem) throw new Error('`id` 不存在')
+      }),
+    body('agent')
+      .exists() // 欄位存在
+      .withMessage('欄位 `agent` 必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 `id`')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await agentsModel.findById(id)
+        if (!matchItem) throw new Error('`id` 不存在')
+      }),
+
+    body('name')
+      .optional()
+      .notEmpty()
+      .withMessage('`name` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`name` 必須為字串格式')
+      .bail() // 名稱與agent 同時存在
+      .custom(async (value, { req }) => {
+        const errorsValidate = validationResult(req)
+          .formatWith((errors) => errors.msg)
+          .array()
+
+        // 沒有錯誤才詢找，避免重覆報錯
+        if (errorsValidate.length < 1) {
+          const user = await productsModel.findOne({
+            name: value,
+            type: req.body.type,
+            agents: {
+              $in: [req.body.agent],
+            },
+          })
+          if (user) throw new Error('商品已存在')
+        }
+      }),
+
+    body('type')
+      .optional()
+      .notEmpty()
+      .withMessage('`type` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`type` 必須為字串格式'),
+
+    body('description')
+      .optional()
+      .notEmpty()
+      .withMessage('`description` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`description` 必須為字串格式'),
+
+    body('price')
+      .optional()
+      .notEmpty()
+      .withMessage('`price` 不可為空值')
+      .bail()
+      .isNumeric() // 為數格式 "123" 會過
+      .withMessage('`price` 必須為數字格式')
+      .bail()
+      .not()
+      .isIn([0, '0'])
+      .withMessage('`price` 不可為 0'),
+
+    body('extras')
+      .optional()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 extras `id`')
+      .bail() // id 不存在
+      .custom(async (extrasIdArray) => {
+        const extrasLength =
+          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
+
+        // 查詢是否「包含」id 群
+        const matchItems = await extrasModel.find({
+          _id: { $in: extrasIdArray },
+        })
+
+        if (matchItems.length !== extrasLength)
+          throw new Error('`extras` 中，有不存在的 ID')
+      }),
+  ],
+
   deleteProduct: [
     param('id')
       .isMongoId() // 是否為 mongo id
@@ -147,22 +242,59 @@ const validation = {
     body('extrasId')
       .exists() // 欄位存在
       .withMessage('欄位 `extrasId` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `extras id`')
+      // .bail()
+      // .isMongoId() // 是否為 mongo id
+      // .withMessage('無效的 `extras id`')
       .bail()
       // extras id 是否存在
       .custom(async (extrasId) => {
-        const matchExtrasItem = await extrasModel.findById(extrasId)
-        if (!matchExtrasItem) throw new Error('extrasId Error: 配料不存在 ')
+        let extrasAry = []
+
+        if (typeof extrasId === 'string') {
+          extrasAry = [extrasId]
+        } else if (Array.isArray(extrasId)) {
+          // 排除重複項目
+          extrasAry = [...new Set(extrasId)]
+        } else throw new Error('格式錯誤')
+
+        console.log('extrasAry', extrasAry)
+
+        // 是否為 object id
+        extrasAry.forEach((id) => {
+          if (!ObjectId.isValid(id)) throw new Error('包含錯誤的 id')
+        })
+
+        const matchExtrasItem = await extrasModel
+          .find({
+            _id: { $in: extrasAry },
+          })
+          .lean()
+
+        console.log(matchExtrasItem)
+
+        const matchItemIds = matchExtrasItem.map((item) => item._id)
+
+        console.log(
+          new Set(matchItemIds).size,
+          new Set(extrasAry).size,
+          new Set(matchItemIds) === new Set(extrasAry),
+          new Set(matchItemIds).has(extrasAry[0])
+        )
+
+        console.log(
+          matchItemIds[0],
+          extrasAry[0],
+          matchItemIds[0] == extrasAry[0]
+        )
+
+        // if (!matchExtrasItem) throw new Error('extrasId Error: 配料不存在 ')
       })
       .bail()
       .custom(async (extrasId, { req }) => {
-        const productId = req.params.productId
-
-        await productsModel.findByIdAndUpdate(productId, {
-          $addToSet: { extras: extrasId },
-        })
+        // const productId = req.params.productId
+        // await productsModel.findByIdAndUpdate(productId, {
+        //   $addToSet: { extras: extrasId },
+        // })
       }),
   ],
 
@@ -290,7 +422,9 @@ const createProduct = catchAsync(async (req, res) => {
     price,
   })
 
-  res.send(createItem)
+  if (createItem) return getProducts(req, res)
+
+  // successResponse({ res, data: createItem })
 })
 
 const deleteProduct = getProducts
@@ -314,12 +448,27 @@ const deleteProductExtrasItem = catchAsync(async (req, res) => {
   successResponse({ res, data: productItem })
 })
 
+const updateProduct = catchAsync(async (req, res) => {
+  const { name, type, price, extras, description } = req.body
+
+  const resData = await productsModel.findByIdAndUpdate(req.params.id, {
+    name,
+    type,
+    price,
+    extras,
+    description,
+  })
+
+  if (resData) return getProducts(req, res)
+})
+
 module.exports = {
   validation,
 
   getProducts,
   createProduct,
   deleteProduct,
+  updateProduct,
 
   createProductExtrasItem,
   deleteProductExtrasItem,
