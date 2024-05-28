@@ -2,7 +2,10 @@ const { query, header } = require('express-validator')
 const agentsModel = require('../models/agents.model')
 const orderModel = require('../models/orders.model')
 const { successResponse } = require('../utils/responseHandlers')
-const { getAllPaymentTypeTotal } = require('../utils/dashboard')
+const {
+  getAllPaymentTypeTotal,
+  computedTotalProductItem,
+} = require('../utils/dashboard')
 
 const validation = {
   getBaseData: [
@@ -106,14 +109,18 @@ const getBaseData = async (req, res, next) => {
     .populate({
       path: 'items',
       populate: {
-        path: 'extras',
+        path: 'extrasData',
+        populate: {
+          path: 'extraItem',
+        },
       },
     })
     .lean()
 
   const total = getAllPaymentTypeTotal(searchOrderData)
+  const completedTotalItem = computedTotalProductItem(total.completed)
 
-  successResponse({ res, data: { total } })
+  successResponse({ res, data: { total, completedTotalItem } })
 }
 
 module.exports = {
