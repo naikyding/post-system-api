@@ -25,6 +25,7 @@ const getAllPaymentTypeTotal = (orderData) => {
         matchItem['data'] = [
           ...matchItem['data'],
           {
+            items: cur.items,
             createdAt: cur.createdAt,
             total: cur.totalPrice,
             mobile: cur.mobileNoThreeDigits,
@@ -41,6 +42,7 @@ const getAllPaymentTypeTotal = (orderData) => {
             bagQuantity: formatQuantity['bag'],
             data: [
               {
+                items: cur.items,
                 createdAt: cur.createdAt,
                 total: cur.totalPrice,
                 mobile: cur.mobileNoThreeDigits,
@@ -112,6 +114,59 @@ const getAllPaymentTypeTotal = (orderData) => {
   return formatData
 }
 
+const computedTotalProductItem = (data) => {
+  let computedAry = []
+
+  data.forEach((item) => {
+    item.data.forEach((dataItem) => {
+      dataItem.items.forEach((itemsItem) => {
+        // extrasData
+        if (itemsItem.extrasData.length > 0) {
+          itemsItem.extrasData.forEach((item) => {
+            const matchItem = computedAry.find(
+              (accItem) => accItem.id === item.extraItem._id
+            )
+            if (matchItem) {
+              matchItem.quantity += item.quantity
+            } else {
+              computedAry = [
+                ...computedAry,
+                {
+                  id: item.extraItem._id,
+                  type: item.extraItem.type,
+                  name: item.extraItem.name,
+                  quantity: item.quantity,
+                },
+              ]
+            }
+          })
+        }
+
+        // product
+        const matchProductItem = computedAry.find(
+          (accItem) => accItem.id === itemsItem.product._id
+        )
+        if (matchProductItem) {
+          matchProductItem.quantity += itemsItem.quantity
+        } else {
+          computedAry = [
+            ...computedAry,
+            {
+              id: itemsItem.product._id,
+              type: itemsItem.product.type,
+              name: itemsItem.product.name,
+              quantity: itemsItem.quantity,
+            },
+          ]
+        }
+      })
+    })
+  })
+
+  return computedAry
+}
+
 module.exports = {
   getAllPaymentTypeTotal,
+  computedTotalProductItem,
 }
