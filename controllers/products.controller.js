@@ -127,9 +127,10 @@ const validation = {
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
       .bail() // id 不存在
-      .custom(async (id) => {
+      .custom(async (id, { req }) => {
         const matchItem = await productsModel.findById(id)
-        if (!matchItem) throw new Error('`id` 不存在')
+        if (matchItem) req.matchItem = matchItem
+        else throw new Error('`id` 不存在')
       }),
     body('agent')
       .exists() // 欄位存在
@@ -140,6 +141,7 @@ const validation = {
       .bail() // id 不存在
       .custom(async (id) => {
         const matchItem = await agentsModel.findById(id)
+
         if (!matchItem) throw new Error('`id` 不存在')
       }),
 
@@ -156,16 +158,21 @@ const validation = {
           .formatWith((errors) => errors.msg)
           .array()
 
+        console.log('matchExtraItem', req.matchItem)
+
         // 沒有錯誤才詢找，避免重覆報錯
         if (errorsValidate.length < 1) {
-          const user = await productsModel.findOne({
-            name: value,
-            type: req.body.type,
-            agents: {
-              $in: [req.body.agent],
-            },
-          })
-          if (user) throw new Error('商品已存在')
+          if (req.matchItem.name === req.body.name) return true
+          else {
+            const user = await productsModel.findOne({
+              name: value,
+              type: req.body.type,
+              agents: {
+                $in: [req.body.agent],
+              },
+            })
+            if (user) throw new Error('商品已存在')
+          }
         }
       }),
 
