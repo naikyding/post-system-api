@@ -137,16 +137,21 @@ const validation = {
           .formatWith((errors) => errors.msg)
           .array()
 
+        console.log('req.matchExtraItem', req.matchExtraItem)
+
         // 沒有錯誤才詢找，避免重覆報錯
         if (errorsValidate.length < 1) {
-          const extraItem = await extrasModel.findOne({
-            name: value,
-            type: req.body.type,
-            agents: {
-              $in: [req.body.agent],
-            },
-          })
-          if (extraItem) throw new Error('商品已存在')
+          if (req.matchExtraItem.name === req.body.name) return true
+          else {
+            const extraItem = await extrasModel.findOne({
+              name: value,
+              type: req.body.type,
+              agents: {
+                $in: [req.body.agent],
+              },
+            })
+            if (extraItem) throw new Error('商品已存在')
+          }
         }
       }),
 
