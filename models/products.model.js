@@ -2,6 +2,18 @@ const mongoose = require('mongoose')
 
 const productsSchema = new mongoose.Schema(
   {
+    // 商品狀態
+    status: {
+      type: String,
+      enum: [
+        'active', // 上架
+        'inactive', // 下架
+        'deprecated', // 棄用
+      ],
+      // required: [true, '商品狀態是必填項目'],
+      default: 'inactive',
+    },
+
     type: {
       type: String,
       required: [true, 'type 是必填項目'],

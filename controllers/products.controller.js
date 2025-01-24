@@ -67,6 +67,16 @@ const validation = {
         }
       }),
 
+    body('status')
+      .exists() // 欄位存在
+      .withMessage('欄位 `status` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`status` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`status` 必須為字串格式'),
+
     body('type')
       .exists() // 欄位存在
       .withMessage('欄位 `type` 必填')
@@ -418,8 +428,10 @@ const getProducts = catchAsync(async (req, res) => {
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, agent, extras, price, image } = req.body
+  const { name, type, description, agent, extras, price, image, status } =
+    req.body
   const createItem = await productsModel.create({
+    status,
     type,
     name,
     description,
@@ -456,7 +468,7 @@ const deleteProductExtrasItem = catchAsync(async (req, res) => {
 })
 
 const updateProduct = catchAsync(async (req, res) => {
-  const { name, type, price, extras, description } = req.body
+  const { name, type, price, extras, description, status } = req.body
 
   const resData = await productsModel.findByIdAndUpdate(req.params.id, {
     name,
@@ -464,6 +476,7 @@ const updateProduct = catchAsync(async (req, res) => {
     price,
     extras,
     description,
+    status,
   })
 
   if (resData) return getProducts(req, res)
