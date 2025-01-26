@@ -2,6 +2,9 @@
   "name": "post-system-api",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": "v18.16.0"
+  },
   "scripts": {
     "dev": "nodemon ./bin/www",
     "start": "node ./bin/www"
