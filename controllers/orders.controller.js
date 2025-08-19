@@ -773,7 +773,10 @@ const getOrderList = catchAsync(async (req, res) => {
   const sort = () => {
     if (status === 'completed' || status === 'cancelled')
       return { updatedAt: -1 }
-    return { createAt: 1 }
+    return { scheduledAt: 1, createdAt: 1 }
+    //     有 scheduledAt 的 → 用 scheduledAt 排
+    // scheduledAt 為 null 的 → MongoDB 會 fallback 到 createdAt
+    // 最終順序是「兩者混在一起」，因為它是同一個 sort key chain
   }
 
   let orderList = await getOrderListQuery
