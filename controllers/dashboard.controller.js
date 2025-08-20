@@ -70,6 +70,21 @@ const getBaseData = async (req, res, next) => {
   if (payType !== 'all')
     filterContent['paymentType'] = payType === 'linepay' ? 'Line Pay' : payType
 
+  const dynamicAt = (originFilterContent, from, to) => ({
+    ...originFilterContent,
+    $expr: {
+      $and: [
+        { $gte: [{ $ifNull: ['$scheduledAt', '$createdAt'] }, from] },
+        { $lte: [{ $ifNull: ['$scheduledAt', '$createdAt'] }, to] },
+      ],
+    },
+    // 說明
+    // {$ifNull: ['$scheduledAt', '$createdAt']}
+    // → 如果 scheduledAt 不為空，回傳它；否則回傳 createdAt。
+    // $expr 允許在查詢條件中使用 MongoDB 的運算符比較不同欄位或欄位與常數的關係。
+    // $and 保證篩選的日期範圍同時符合 開始時間 與 結束時間。
+  })
+
   // 若有日期
   if (from && to) {
     // 00:00 ~ 23:59 換台灣時間
@@ -77,7 +92,7 @@ const getBaseData = async (req, res, next) => {
     to.setHours(23 - 8, 59, 59, 999)
 
     console.log(`指定搜尋時間: (utc +0)`, from, to)
-    filterContent['createdAt'] = { $gte: from, $lte: to }
+    filterContent = dynamicAt(filterContent, from, to)
   }
 
   // 若無日期 (預設搜尋當日)
@@ -89,10 +104,7 @@ const getBaseData = async (req, res, next) => {
     from.setHours(0 - 8, 0, 0, 0)
     to.setHours(23 - 8, 59, 59, 999)
 
-    filterContent['createdAt'] = {
-      $gte: from,
-      $lte: to,
-    }
+    filterContent = dynamicAt(filterContent, from, to)
   }
 
   const searchOrderData = await orderModel
