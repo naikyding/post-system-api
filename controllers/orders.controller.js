@@ -255,6 +255,15 @@ const validation = {
         })
       }),
 
+    // 預定時間
+    body('scheduledAt')
+      .optional() // 有欄位才驗證
+      .notEmpty()
+      .withMessage('scheduledAt 不可為空值')
+      .bail()
+      .isISO8601()
+      .withMessage('`scheduledAt` 須為日期格式'),
+
     // 驗證訂單「總金額」
     body('totalPrice')
       .exists() // 欄位存在
@@ -713,6 +722,20 @@ const getOrderList = catchAsync(async (req, res) => {
   const { status, paid: isPaid, from, to, agent, paymentType } = req.query
 
   let filterContent = {}
+  const returnAtQuery = (filterContent, from, to) => ({
+    ...filterContent,
+    $expr: {
+      $and: [
+        { $gte: [{ $ifNull: ['$scheduledAt', '$createdAt'] }, from] },
+        { $lte: [{ $ifNull: ['$scheduledAt', '$createdAt'] }, to] },
+      ],
+    },
+    // 說明
+    // {$ifNull: ['$scheduledAt', '$createdAt']}
+    // → 如果 scheduledAt 不為空，回傳它；否則回傳 createdAt。
+    // $expr 允許在查詢條件中使用 MongoDB 的運算符比較不同欄位或欄位與常數的關係。
+    // $and 保證篩選的日期範圍同時符合 開始時間 與 結束時間。
+  })
 
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
@@ -728,7 +751,8 @@ const getOrderList = catchAsync(async (req, res) => {
     to.setHours(23 - 8, 59, 59, 999)
 
     console.log(`指定搜尋時間: (utc +0)`, from, to)
-    filterContent['createdAt'] = { $gte: from, $lte: to }
+
+    filterContent = returnAtQuery(filterContent, from, to)
   }
 
   // 預設搜尋當日
@@ -740,18 +764,19 @@ const getOrderList = catchAsync(async (req, res) => {
     from.setHours(0 - 8, 0, 0, 0)
     to.setHours(23 - 8, 59, 59, 999)
 
-    filterContent['createdAt'] = {
-      $gte: from,
-      $lte: to,
-    }
+    filterContent = returnAtQuery(filterContent, from, to)
   }
 
+  console.log('filterContent => ', filterContent)
   let getOrderListQuery = ordersModel.find(filterContent)
 
   const sort = () => {
     if (status === 'completed' || status === 'cancelled')
       return { updatedAt: -1 }
-    return { createAt: 1 }
+    return { scheduledAt: 1, createdAt: 1 }
+    //     有 scheduledAt 的 → 用 scheduledAt 排
+    // scheduledAt 為 null 的 → MongoDB 會 fallback 到 createdAt
+    // 最終順序是「兩者混在一起」，因為它是同一個 sort key chain
   }
 
   let orderList = await getOrderListQuery
@@ -876,6 +901,7 @@ const createOrder = catchAsync(async (req, res) => {
     isPaid,
     paymentType,
     mobileNoThreeDigits,
+    scheduledAt,
   } = req.body
 
   const createdOrder = await ordersModel.create({
@@ -886,6 +912,7 @@ const createOrder = catchAsync(async (req, res) => {
     note,
     isPaid,
     paymentType,
+    scheduledAt,
 
     items: computedItemsData,
   })

@@ -110,6 +110,9 @@ const ordersSchema = mongoose.Schema(
       ref: 'Agent',
       required: [true, '欄位 `agent` 必填'],
     },
+    scheduledAt: {
+      type: Date,
+    },
   },
   {
     versionKey: false,
