@@ -12,6 +12,7 @@ const authRouter = require('./auth')
 const usersRouter = require('./users')
 const dashboardRouter = require('./dashboard')
 const markersRouter = require('./markers')
+const menusRouter = require('./menus')
 
 router.use('/', indexRouter)
 router.use('/orders', orderRouter)
@@ -24,5 +25,6 @@ router.use('/auth', authRouter)
 router.use('/users', usersRouter)
 router.use('/dashboard', dashboardRouter)
 router.use('/markers', markersRouter)
+router.use('/menus', menusRouter)
 
 module.exports = router
