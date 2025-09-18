@@ -11,7 +11,6 @@ const {
   patchOperation,
 } = require('../../controllers/operations.controller')
 const validateHandler = require('../../utils/validateHandler')
-validateHandler
 
 router.get('/', auth, validation.getOperations, getOperations)
 
