@@ -1,9 +1,24 @@
 const rolesModel = require('../models/roles.model')
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, validationResult } = require('express-validator')
+const { body, param, validationResult } = require('express-validator')
 
 const validation = {
+  validateId: [
+    param('id')
+      .exists()
+      .withMessage('項目 id 必填')
+      .bail()
+      .isMongoId()
+      .withMessage('項目 id 格式無效')
+      .bail()
+      .custom(async (id) => {
+        const matchItem = await rolesModel.findById(id)
+        if (!matchItem) throw new Error('項目 id 不存在')
+        return true
+      }),
+  ],
+
   createRole: [
     body('name')
       .exists() // 欄位存在
@@ -20,11 +35,24 @@ const validation = {
         if (user) throw new Error('角色已存在')
       }),
   ],
+
+  deleteRole: [],
+  patchRole: [],
 }
 
 const getRoles = catchAsync(async (req, res) => {
-  const data = await rolesModel.find()
-  successResponse({ res, data })
+  const roles = await rolesModel
+    .find()
+    .find()
+    .select('-createdAt -updatedAt')
+    .lean()
+    .exec()
+
+  successResponse({ res, roles })
+})
+
+const deleteRole = catchAsync(async (req, res) => {
+  res.send('Delete role')
 })
 
 const createRole = catchAsync(async (req, res, next) => {
@@ -35,8 +63,15 @@ const createRole = catchAsync(async (req, res, next) => {
   successResponse({ res, statusCode: 201, data: [createdRes] })
 })
 
+const patchRole = catchAsync(async (req, res) => {
+  res.send('patchRole')
+})
+
 module.exports = {
-  getRoles,
   createRole,
   validation,
+
+  getRoles,
+  deleteRole,
+  patchRole,
 }
