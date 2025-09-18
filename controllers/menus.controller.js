@@ -1,5 +1,5 @@
 const catchAsync = require('../utils/catchAsync')
-const { body, validationResult, header, param } = require('express-validator')
+const { body, param } = require('express-validator')
 
 const menusModel = require('../models/menus.model')
 const { successResponse } = require('../utils/responseHandlers')
@@ -104,7 +104,6 @@ const validation = {
       .withMessage('「名稱 name」最長 100 字元')
       .bail()
       .custom(async (name, { req }) => {
-        console.log(444)
         // 檢查名稱唯一性（排除自己）
         const exists = await menusModel.findOne({
           name,
