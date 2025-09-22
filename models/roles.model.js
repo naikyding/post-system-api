@@ -28,7 +28,7 @@ const roleSchema = new mongoose.Schema(
     menus: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Menu' }],
 
     // 能做哪些操作（API 控制）
-    permissions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Operation' }],
+    operations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Operation' }],
 
     // 系統內建角色（不可刪、限制編輯）
     isSystem: {
@@ -44,7 +44,11 @@ const roleSchema = new mongoose.Schema(
     },
     // 當 dataScope=custom 時，可指定資料可見的單位/群組等（依你的業務實體調整）
     dataScopeRefs: [
-      { type: mongoose.Schema.Types.ObjectId, ref: 'Dept', default: undefined },
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Agent',
+        default: undefined,
+      },
     ],
 
     createdBy: {

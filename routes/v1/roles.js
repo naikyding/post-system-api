@@ -5,6 +5,7 @@ const validateHandler = require('../../utils/validateHandler')
 const { auth } = require('../../utils/auth')
 
 const {
+  authValidateAndSaveMiddleware,
   validation,
 
   getRoles,
@@ -14,6 +15,15 @@ const {
 } = require('../../controllers/roles.controller')
 
 router.get('/', auth, getRoles)
+
+router.post(
+  '/',
+  auth,
+  authValidateAndSaveMiddleware,
+  validation.createRole,
+  validateHandler,
+  createRole
+)
 
 router.delete(
   '/:id',
@@ -25,13 +35,12 @@ router.delete(
   deleteRole
 )
 
-router.post('/', validation.createRole, validateHandler, createRole)
-
 router.patch(
   '/:id',
   auth,
   validation.validateId,
   validateHandler,
+  authValidateAndSaveMiddleware,
   validation.patchRole,
   validateHandler,
   patchRole
