@@ -18,6 +18,7 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
         {
           path: 'menus',
           select: '-createdAt -updatedAt',
+          options: { sort: { sort: 1 } },
         },
         {
           path: 'operations',
