@@ -6,6 +6,7 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
   const { _id } = req.user
   const matchUser = await usersModel
     .findById(_id)
+
     .populate({
       path: 'agents',
       select: '-createdAt -updatedAt',
@@ -13,6 +14,16 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
     .populate({
       path: 'roles',
       select: '-createdAt -updatedAt',
+      populate: [
+        {
+          path: 'menus',
+          select: '-createdAt -updatedAt',
+        },
+        {
+          path: 'operations',
+          select: '-createdAt -updatedAt',
+        },
+      ],
     })
     .select('email roles agents nickname avatar phone note')
     .lean()

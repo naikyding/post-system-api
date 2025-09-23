@@ -31,4 +31,4 @@ const operationSchema = new mongoose.Schema(
   }
 )
 
-module.exports = mongoose.model('Operations', operationSchema)
+module.exports = mongoose.model('Operation', operationSchema)
