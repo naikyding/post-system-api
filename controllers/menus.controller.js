@@ -56,7 +56,18 @@ const validation = {
       }),
     body('path').notEmpty().withMessage('path 是必填項目'),
     body('component').notEmpty().withMessage('component 是必填項目'),
-
+    body('parentId')
+      .optional() // parentId 可以不傳
+      .isMongoId()
+      .withMessage('parentId 必須是合法的 MongoId 格式')
+      .bail() // 如果格式錯誤就停止往下驗證
+      .custom(async (value) => {
+        const exists = await menusModel.findById(value)
+        if (!exists) {
+          throw new Error('parentId 不存在於 menusModel')
+        }
+        return true
+      }),
     // 商家 (option)
     // header('mc-agents-id')
     //   .notEmpty()
@@ -165,19 +176,25 @@ const getMenus = catchAsync(async (req, res) => {
 
 const createMenu = catchAsync(async (req, res) => {
   // const agentId = req.headers['mc-agents-id']
-  const { sort, status, icon, name, description, routeName, path, component } =
-    req.body
 
-  const data = {
-    sort,
-    status,
-    icon,
-    name,
-    description,
-    routeName,
-    path,
-    component,
-  }
+  const allowedFields = [
+    'sort',
+    'status',
+    'icon',
+    'name',
+    'description',
+    'routeName',
+    'path',
+    'component',
+    'parentId',
+  ]
+
+  const data = allowedFields.reduce((acc, cur) => {
+    if (req.body[cur] !== undefined) {
+      acc[cur] = req.body[cur]
+    }
+    return acc
+  }, {})
 
   const menus = await menusModel.create(data)
 
@@ -199,7 +216,6 @@ const deleteMenu = catchAsync(async (req, res) => {
 })
 
 const patchMenu = catchAsync(async (req, res) => {
-  console.log(123)
   const patchItemId = req.params.id
   const allowedFields = [
     'sort',

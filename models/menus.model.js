@@ -36,6 +36,11 @@ const menuSchema = new mongoose.Schema(
       required: [true, 'component 是必填項目'],
     },
 
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Menu', // 注意這裡要填自己 model 的名字
+      default: null, // 沒有父層時可為 null
+    },
     // agentId: {
     //   type: mongoose.Schema.Types.ObjectId,
     //   ref: 'Agent', // 這裡的 'Agent' 要對應到你 agents model 的名稱
