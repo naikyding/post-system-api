@@ -3,6 +3,7 @@ const { body, param } = require('express-validator')
 
 const menusModel = require('../models/menus.model')
 const { successResponse } = require('../utils/responseHandlers')
+const menusService = require('../services/menus.service')
 
 // 驗證 id
 
@@ -148,18 +149,13 @@ const validation = {
   ],
 }
 
-const getMenusFun = catchAsync(async () => {
-  const menus = await menusModel
-    .find()
-    .select('-createdAt -updatedAt')
-    .lean()
-    .exec()
-
-  return menus
-})
-
 const getMenus = catchAsync(async (req, res) => {
-  const menus = await getMenusFun()
+  const { include } = req.query
+
+  const menus =
+    include === 'operations'
+      ? await menusService.getMenusIncludeOperations()
+      : await menusService.getMenus()
 
   successResponse({
     res,
