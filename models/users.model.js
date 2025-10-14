@@ -10,18 +10,21 @@ const userSchema = new mongoose.Schema(
       required: [true, '欄位 `password` 必填'],
       type: String,
     },
-    roles: [
+
+    agentRoles: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Role',
-      },
-    ],
-    agents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Agent',
+        agent: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Agent',
+          required: [true, '商家 `agent` 是必填項目'],
+        },
+        roles: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Role',
+            required: [true, '角色 `role` 是必填項目'],
+          },
+        ],
       },
     ],
 
