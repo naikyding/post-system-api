@@ -35,7 +35,7 @@ const validation = {
       .withMessage('status 是必填項目')
       .isBoolean()
       .withMessage('status 必須是布林值'),
-    body('icon').notEmpty().withMessage('icon 是必填項目'),
+    // body('icon').notEmpty().withMessage('icon 是必填項目'),
     body('name')
       .notEmpty()
       .withMessage('name 是必填項目')
@@ -45,7 +45,7 @@ const validation = {
         return true
       }),
 
-    body('description').notEmpty().withMessage('description 是必填項目'),
+    // body('description').notEmpty().withMessage('description 是必填項目'),
     body('routeName')
       .notEmpty()
       .withMessage('routeName 是必填項目')
@@ -58,6 +58,7 @@ const validation = {
     body('component').notEmpty().withMessage('component 是必填項目'),
     body('parentId')
       .optional() // parentId 可以不傳
+
       .isMongoId()
       .withMessage('parentId 必須是合法的 MongoId 格式')
       .bail() // 如果格式錯誤就停止往下驗證

@@ -13,7 +13,7 @@ const {
 const validateHandler = require('../../utils/validateHandler')
 validateHandler
 
-router.get('/', auth, validation.getMenus, getMenus)
+router.get('/', auth, validation.getMenus, validateHandler, getMenus)
 
 router.post('/', auth, validation.createMenu, validateHandler, createMenu)
 

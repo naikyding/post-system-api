@@ -12,7 +12,7 @@ const menuSchema = new mongoose.Schema(
     },
     icon: {
       type: String,
-      required: [true, 'icon 是必填項目'],
+      // required: [true, 'icon 是必填項目'],
     },
     name: {
       type: String,
@@ -20,7 +20,7 @@ const menuSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, 'description 是必填項目'],
+      // required: [true, 'description 是必填項目'],
     },
 
     routeName: {
