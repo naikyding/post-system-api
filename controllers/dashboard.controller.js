@@ -128,8 +128,7 @@ const getBaseData = async (req, res, next) => {
       },
     })
     .lean()
-  console.log('searchOrderData', searchOrderData)
-  console.log('filterContent', filterContent)
+
   const total = getAllPaymentTypeTotal(searchOrderData)
   const completedTotalItem = computedTotalProductItem(total.completed)
 
