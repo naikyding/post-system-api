@@ -117,26 +117,24 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
   const matchUser = await usersModel
     .findById(_id)
 
-    .populate({
-      path: 'agents',
-      select: '-createdAt -updatedAt',
-    })
-    .populate({
-      path: 'roles',
-      select: '-createdAt -updatedAt',
-      populate: [
-        {
-          path: 'menus',
-          select: '-createdAt -updatedAt',
-          options: { sort: { sort: 1 } },
-        },
-        {
-          path: 'operations',
-          select: '-createdAt -updatedAt',
-        },
-      ],
-    })
-    .select('email roles agents nickname avatar phone note')
+    .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 name
+    .populate('agentRoles.roles', 'name') // 可選：帶出 role 的 name
+    // .populate({
+    //   path: 'roles',
+    //   select: '-createdAt -updatedAt',
+    //   populate: [
+    //     {
+    //       path: 'menus',
+    //       select: '-createdAt -updatedAt',
+    //       options: { sort: { sort: 1 } },
+    //     },
+    //     {
+    //       path: 'operations',
+    //       select: '-createdAt -updatedAt',
+    //     },
+    //   ],
+    // })
+    // .select('email roles agents nickname avatar phone note')
     .lean()
 
   successResponse({ res, data: matchUser })

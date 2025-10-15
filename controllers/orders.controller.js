@@ -767,7 +767,6 @@ const getOrderList = catchAsync(async (req, res) => {
     filterContent = returnAtQuery(filterContent, from, to)
   }
 
-  console.log('filterContent => ', filterContent)
   let getOrderListQuery = ordersModel.find(filterContent)
 
   const sort = () => {
