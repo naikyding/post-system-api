@@ -1,6 +1,6 @@
 const catchAsync = require('../utils/catchAsync')
 const { successResponse, errorResponse } = require('../utils/responseHandlers')
-const { body, param, validationResult } = require('express-validator')
+const { body, param, validationResult, header } = require('express-validator')
 const { verifyToken } = require('../utils/auth')
 
 const mongoose = require('mongoose')
@@ -75,6 +75,17 @@ const validation = {
   ],
 
   createRole: [
+    header('mc-agent-id')
+      .exists() // 欄位存在
+      .withMessage('「商家」必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('「商家」無效')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await agentsModel.findById(id)
+        if (!matchItem) throw new Error('「商家」不存在')
+      }),
     body('name')
       .exists()
       .withMessage('角色名稱必填')
@@ -281,6 +292,8 @@ const getRoles = catchAsync(async (req, res) => {
 
 const createRole = catchAsync(async (req, res) => {
   const userId = req.user.id
+  const agentId = req.headers['mc-agent-id']
+
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return errorResponse({
       res,
@@ -308,6 +321,7 @@ const createRole = catchAsync(async (req, res) => {
 
   data['createdBy'] = userId
   data['updatedBy'] = userId
+  if (agentId) data['dataScopeRefs'] = [agentId]
 
   const createdRole = await rolesModel.create(data)
   if (!createdRole) {
