@@ -74,6 +74,20 @@ const validation = {
       }),
   ],
 
+  getRoles: [
+    header('mc-agent-id')
+      .exists() // 欄位存在
+      .withMessage('「商家」必填')
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('「商家」無效')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchItem = await agentsModel.findById(id)
+        if (!matchItem) throw new Error('「商家」不存在')
+      }),
+  ],
+
   createRole: [
     header('mc-agent-id')
       .exists() // 欄位存在
@@ -281,8 +295,15 @@ const validation = {
 }
 
 const getRoles = catchAsync(async (req, res) => {
+  const agentId = req.headers['mc-agent-id']
+  const query = req.query.agent
+    ? {
+        dataScopeRefs: agentId,
+      }
+    : {}
+
   const roles = await rolesModel
-    .find()
+    .find(query)
     .select('-createdAt -updatedAt')
     .lean()
     .exec()

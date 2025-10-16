@@ -14,7 +14,7 @@ const {
   patchRole,
 } = require('../../controllers/roles.controller')
 
-router.get('/', auth, getRoles)
+router.get('/', auth, validation.getRoles, validateHandler, getRoles)
 
 router.post(
   '/',
