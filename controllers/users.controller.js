@@ -17,12 +17,12 @@ const validation = {
       .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
   ],
   getUserBaseInfo: [
-    header('mc-agent-id')
-      .exists() // 欄位存在
-      .withMessage('廠商 ID 必填 (`mc-agent-id`)')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
+    // header('mc-agent-id')
+    //   .exists() // 欄位存在
+    //   .withMessage('廠商 ID 必填 (`mc-agent-id`)')
+    //   .bail()
+    //   .isMongoId() // 是否為 mongo id
+    //   .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
   ],
 
   createUser: [

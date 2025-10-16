@@ -16,8 +16,8 @@ router.post('/', auth, validation.createUser, validateHandler, createUser)
 router.get(
   '/base-info',
   auth,
-  validation.getUserBaseInfo,
-  validateHandler,
+  // validation.getUserBaseInfo,
+  // validateHandler,
   getUserBaseInfo
 )
 
