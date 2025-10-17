@@ -90,6 +90,68 @@ const validation = {
         return true
       }),
   ],
+
+  updateUser: [
+    // 驗證 URL 參數 id
+    param('id').isMongoId().withMessage('無效的 id 格式'),
+
+    // email 可選，但若有傳入就要驗證格式 & 唯一性
+    body('email')
+      .optional({ checkFalsy: true })
+      .isEmail()
+      .withMessage('欄位 `email` 格式不正確')
+      .bail()
+      .custom(async (value, { req }) => {
+        const existing = await usersModel.findOne({ email: value }).lean()
+        if (existing && existing._id.toString() !== req.params.id) {
+          throw new Error('該 email 已被使用')
+        }
+        return true
+      }),
+
+    // password 可選，但若有傳入就要驗證長度
+    body('password')
+      .optional()
+      .isLength({ min: 8 })
+      .withMessage('欄位 `password` 至少 8 字元'),
+
+    // agentRoles 可選
+    body('agentRoles')
+      .optional()
+      .isArray({ min: 1 })
+      .withMessage('至少需要指定一個與角色'),
+
+    body('agentRoles.*.agent')
+      .optional()
+      .isMongoId()
+      .withMessage('商家 `agent` 必須為有效的 ObjectId')
+      .bail()
+      .custom(async (id) => {
+        const exists = await agentsModel.findById(id).lean()
+        if (!exists) throw new Error(`指定的商家 agent ${id} 不存在`)
+        return true
+      }),
+
+    body('agentRoles.*.roles')
+      .optional()
+      .isArray({ min: 1 })
+      .withMessage('角色 `roles` 至少需要 1 個'),
+
+    body('agentRoles.*.roles')
+      .isArray({ min: 1 })
+      .withMessage('角色 `roles` 至少需要 1 個'),
+
+    body('agentRoles.*.roles.*')
+      .optional()
+      .isMongoId()
+      .withMessage('角色 `role` 必須為有效的 ObjectId')
+      .bail()
+      .custom(async (id) => {
+        const exists = await rolesModel.findById(id).lean()
+        if (!exists) throw new Error(`指定的 role ${id} 不存在`)
+        return true
+      }),
+  ],
 }
 
 const getUsers = catchAsync(async (req, res) => {
@@ -112,7 +174,7 @@ const createUser = catchAsync(async (req, res) => {
   // 準備要存的資料
   const userData = {
     email,
-    password: bcrypt.hashSync(password, 12),
+    password: await bcrypt.hashSync(password, 12),
     agentRoles,
     nickname,
     avatar,
@@ -159,10 +221,47 @@ const deleteUser = catchAsync(async (req, res) => {
   successResponse({ res, data: deletedItem })
 })
 
+const updateUser = catchAsync(async (req, res) => {
+  const userId = req.params.id
+  let update = {}
+  const allowedFields = [
+    'email',
+    'password',
+    'agentRoles',
+    'nickname',
+    'avatar',
+    'phone',
+    'note',
+  ]
+
+  for (let field of allowedFields) {
+    if (req.body[field] !== undefined && req.body[field] !== '') {
+      update[field] = req.body[field]
+    }
+  }
+
+  if (update.password) {
+    update.password = await bcrypt.hashSync(update.password, 12)
+  }
+
+  const user = await usersModel
+    .findByIdAndUpdate(userId, update, {
+      new: true,
+    })
+    .lean()
+
+  if (!user) {
+    return res.status(404).json({ message: '使用者不存在' })
+  }
+
+  successResponse({ res, data: user })
+})
+
 module.exports = {
   validation,
   getUserBaseInfo,
   getUsers,
   createUser,
   deleteUser,
+  updateUser,
 }
