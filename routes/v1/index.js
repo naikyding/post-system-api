@@ -14,6 +14,7 @@ const dashboardRouter = require('./dashboard')
 const markersRouter = require('./markers')
 const menusRouter = require('./menus')
 const operationsRouter = require('./operations')
+const routesRouter = require('./routes')
 
 router.use('/', indexRouter)
 router.use('/orders', orderRouter)
@@ -28,5 +29,6 @@ router.use('/dashboard', dashboardRouter)
 router.use('/markers', markersRouter)
 router.use('/menus', menusRouter)
 router.use('/operations', operationsRouter)
+router.use('/routes', routesRouter)
 
 module.exports = router
