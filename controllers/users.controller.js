@@ -3,8 +3,8 @@ const agentsModel = require('../models/agents.model')
 const rolesModel = require('../models/roles.model')
 
 const catchAsync = require('../utils/catchAsync')
-const { successResponse } = require('../utils/responseHandlers')
-const { header, body } = require('express-validator')
+const { successResponse, errorResponse } = require('../utils/responseHandlers')
+const { header, body, param } = require('express-validator')
 const bcrypt = require('bcryptjs')
 
 const validation = {
@@ -75,6 +75,21 @@ const validation = {
         return true
       }),
   ],
+
+  deleteUser: [
+    param('id')
+      .exists()
+      .withMessage('使用者 id 必填')
+      .bail()
+      .isMongoId()
+      .withMessage('使用者 id 格式無效')
+      .bail()
+      .custom(async (id) => {
+        const match = await usersModel.findById(id)
+        if (!match) throw new Error('使用者 id 不存在')
+        return true
+      }),
+  ],
 }
 
 const getUsers = catchAsync(async (req, res) => {
@@ -130,4 +145,24 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
   successResponse({ res, data: matchUser })
 })
 
-module.exports = { validation, getUserBaseInfo, getUsers, createUser }
+const deleteUser = catchAsync(async (req, res) => {
+  const userId = req.params.id
+
+  const deletedItem = await usersModel.findByIdAndDelete(userId)
+  if (!deletedItem) {
+    return errorResponse({
+      res,
+      statusCode: 404,
+      message: '刪除使用者發生錯誤，請重新操作!',
+    })
+  }
+  successResponse({ res, data: deletedItem })
+})
+
+module.exports = {
+  validation,
+  getUserBaseInfo,
+  getUsers,
+  createUser,
+  deleteUser,
+}

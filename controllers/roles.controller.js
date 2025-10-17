@@ -184,7 +184,20 @@ const validation = {
       .custom(async (ary) => validateAry(ary, agentsModel, 'dataScopeRefs')),
   ],
 
-  deleteRole: [],
+  deleteRole: [
+    param('id')
+      .exists()
+      .withMessage('角色 id 必填')
+      .bail()
+      .isMongoId()
+      .withMessage('角色 id 格式無效')
+      .bail()
+      .custom(async (id) => {
+        const match = await rolesModel.findById(id)
+        if (!match) throw new Error('角色 id 不存在')
+        return true
+      }),
+  ],
   patchRole: [
     // 驗證 id
     param('id')
