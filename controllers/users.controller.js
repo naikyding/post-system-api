@@ -92,8 +92,18 @@ const validation = {
   ],
 
   updateUser: [
-    // 驗證 URL 參數 id
-    param('id').isMongoId().withMessage('無效的 id 格式'),
+    param('id')
+      .exists()
+      .withMessage('使用者 id 必填')
+      .bail()
+      .isMongoId()
+      .withMessage('使用者 id 格式無效')
+      .bail()
+      .custom(async (id) => {
+        const match = await usersModel.findById(id)
+        if (!match) throw new Error('使用者 id 不存在')
+        return true
+      }),
 
     // email 可選，但若有傳入就要驗證格式 & 唯一性
     body('email')
@@ -149,6 +159,22 @@ const validation = {
       .custom(async (id) => {
         const exists = await rolesModel.findById(id).lean()
         if (!exists) throw new Error(`指定的 role ${id} 不存在`)
+        return true
+      }),
+  ],
+
+  updateUserPassword: [
+    param('id')
+      .exists()
+      .withMessage('使用者 id 必填')
+      .bail()
+      .isMongoId()
+      .withMessage('使用者 id 格式無效')
+      .bail()
+      .custom(async (id, { req, res }) => {
+        const match = await usersModel.findById(id)
+        if (!match) throw new Error('使用者 id 不存在')
+        req.user = match
         return true
       }),
   ],
@@ -257,6 +283,37 @@ const updateUser = catchAsync(async (req, res) => {
   successResponse({ res, data: user })
 })
 
+const updateUserPassword = catchAsync(async (req, res) => {
+  const { oldPassword, newPassword } = req.body
+  const userId = req.params.id
+  const matchUser = req.user
+
+  const isMatch = await bcrypt.compare(oldPassword, matchUser.password)
+
+  if (!isMatch) {
+    return errorResponse({
+      res,
+      statusCode: 404,
+      message: '舊密碼不正確',
+    })
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return errorResponse({
+      res,
+      statusCode: 404,
+      message: '新密碼至少 8 字元',
+    })
+  }
+
+  matchUser.password = await bcrypt.hashSync(newPassword, 12)
+  const newUserData = await matchUser.save()
+
+  if (newUserData) {
+    successResponse({ res, data: newUserData })
+  }
+})
+
 module.exports = {
   validation,
   getUserBaseInfo,
@@ -264,4 +321,5 @@ module.exports = {
   createUser,
   deleteUser,
   updateUser,
+  updateUserPassword,
 }

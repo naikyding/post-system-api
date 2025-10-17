@@ -8,6 +8,7 @@ const {
   createUser,
   deleteUser,
   updateUser,
+  updateUserPassword,
 } = require('../../controllers/users.controller')
 const validateHandler = require('../../utils/validateHandler')
 
@@ -15,6 +16,13 @@ router.get('/', auth, validation.getUsers, validateHandler, getUsers)
 router.post('/', auth, validation.createUser, validateHandler, createUser)
 router.delete('/:id', auth, validation.deleteUser, validateHandler, deleteUser)
 router.patch('/:id', auth, validation.updateUser, validateHandler, updateUser)
+router.patch(
+  '/:id/password',
+  auth,
+  validation.updateUserPassword,
+  validateHandler,
+  updateUserPassword
+)
 
 // 取得使用者資料
 router.get(
