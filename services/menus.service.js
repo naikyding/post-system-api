@@ -1,5 +1,73 @@
 const menusModel = require('../models/menus.model')
 
+function buildMenuTree(menus) {
+  const map = {}
+  const roots = []
+
+  // 先把所有 menu 存到 map，並初始化 children
+  menus.forEach((menu) => {
+    map[menu._id.toString()] = { ...menu, children: [] }
+  })
+
+  // 再依 parentId 建立樹狀結構
+  menus.forEach((menu) => {
+    if (menu.parentId) {
+      const parent = map[menu.parentId.toString()]
+      if (parent) {
+        const data = {}
+
+        let allowField = [
+          'routeName',
+          'path',
+          'component',
+          'icon',
+          'status',
+          'sort',
+          'children',
+        ]
+
+        allowField.forEach((field) => {
+          if (field === 'routeName') {
+            data['name'] = map[menu._id.toString()][field]
+          } else {
+            data[field] = map[menu._id.toString()][field]
+          }
+        })
+        parent.children.push(data)
+      }
+    } else {
+      const data = {}
+      let allowField = [
+        'routeName',
+        'path',
+        'component',
+        'icon',
+        'status',
+        'sort',
+        'children',
+      ]
+
+      allowField.forEach((field) => {
+        if (field === 'routeName') {
+          data['name'] = map[menu._id.toString()][field]
+        } else {
+          data[field] = map[menu._id.toString()][field]
+        }
+      })
+      roots.push(data)
+    }
+  })
+
+  // 排序函式（依 sort 欄位升序）
+  function sortChildren(nodes) {
+    nodes.sort((a, b) => a.sort - b.sort)
+    nodes.forEach((n) => sortChildren(n.children))
+  }
+
+  sortChildren(roots)
+  return roots
+}
+
 function buildTree(items, parentId = null) {
   return items
     .filter((item) => {
@@ -114,4 +182,4 @@ async function getMenusIncludeOperations() {
   return buildTree(result)
 }
 
-module.exports = { getMenus, getMenusIncludeOperations }
+module.exports = { getMenus, getMenusIncludeOperations, buildMenuTree }
