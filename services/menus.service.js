@@ -1,6 +1,7 @@
 const menusModel = require('../models/menus.model')
 
 function buildMenuTree(menus) {
+  console.log(menus)
   const map = {}
   const roots = []
 
@@ -24,13 +25,23 @@ function buildMenuTree(menus) {
           'status',
           'sort',
           'children',
+          'redirect',
         ]
 
+        const menuId = menu._id.toString()
+        const menuData = map[menuId]
+
         allowField.forEach((field) => {
-          if (field === 'routeName') {
-            data['name'] = map[menu._id.toString()][field]
+          const value = menuData[field]
+
+          if (field === 'redirect' && value) {
+            // redirect 有值才覆蓋 name
+            data.redirect = value
+          } else if (field === 'routeName') {
+            // routeName 永遠覆蓋 name
+            data.name = value
           } else {
-            data[field] = map[menu._id.toString()][field]
+            data[field] = value
           }
         })
         parent.children.push(data)
@@ -45,6 +56,7 @@ function buildMenuTree(menus) {
         'status',
         'sort',
         'children',
+        'redirect',
       ]
 
       allowField.forEach((field) => {

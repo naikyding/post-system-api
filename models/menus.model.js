@@ -41,6 +41,10 @@ const menuSchema = new mongoose.Schema(
       ref: 'Menu', // 注意這裡要填自己 model 的名字
       default: null, // 沒有父層時可為 null
     },
+    redirect: {
+      type: String,
+      default: null,
+    },
     // agentId: {
     //   type: mongoose.Schema.Types.ObjectId,
     //   ref: 'Agent', // 這裡的 'Agent' 要對應到你 agents model 的名稱
