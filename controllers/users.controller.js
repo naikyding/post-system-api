@@ -177,6 +177,8 @@ const validation = {
         req.user = match
         return true
       }),
+    body('oldPassword').exists().withMessage('舊密碼必填'),
+    body('newPassword').exists().withMessage('新密碼必填'),
   ],
 }
 
