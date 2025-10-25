@@ -1,7 +1,6 @@
 const menusModel = require('../models/menus.model')
 
 function buildMenuTree(menus) {
-  console.log(menus)
   const map = {}
   const roots = []
 
@@ -190,7 +189,6 @@ async function getMenusIncludeOperations() {
     ])
     .sort({ sort: 1 }) // 1 = 升冪, -1 = 降冪
     .exec()
-  console.log(result)
   return buildTree(result)
 }
 
