@@ -168,8 +168,6 @@ const validation = {
           .formatWith((errors) => errors.msg)
           .array()
 
-        console.log('matchExtraItem', req.matchItem)
-
         // 沒有錯誤才詢找，避免重覆報錯
         if (errorsValidate.length < 1) {
           if (req.matchItem.name === req.body.name) return true
@@ -274,8 +272,6 @@ const validation = {
           extrasAry = [...new Set(extrasId)]
         } else throw new Error('格式錯誤')
 
-        console.log('extrasAry', extrasAry)
-
         // 是否為 object id
         extrasAry.forEach((id) => {
           if (!ObjectId.isValid(id)) throw new Error('包含錯誤的 id')
@@ -287,22 +283,7 @@ const validation = {
           })
           .lean()
 
-        console.log(matchExtrasItem)
-
         const matchItemIds = matchExtrasItem.map((item) => item._id)
-
-        console.log(
-          new Set(matchItemIds).size,
-          new Set(extrasAry).size,
-          new Set(matchItemIds) === new Set(extrasAry),
-          new Set(matchItemIds).has(extrasAry[0])
-        )
-
-        console.log(
-          matchItemIds[0],
-          extrasAry[0],
-          matchItemIds[0] == extrasAry[0]
-        )
 
         // if (!matchExtrasItem) throw new Error('extrasId Error: 配料不存在 ')
       })
@@ -367,7 +348,6 @@ const getProducts = catchAsync(async (req, res) => {
 
   if (allProducts.length > 0) {
     formatAllProducts = allProducts.reduce((acc, cur) => {
-      console.log('acc', acc)
       // product.extras type 相同整合
       const formatExtras = cur.extras.reduce((extraAcc, extraCur) => {
         const matchExtraAccTypeItem = extraAcc.find(
@@ -427,8 +407,6 @@ const getProducts = catchAsync(async (req, res) => {
       formatAllProducts = [...formatAllProducts, other]
     }
   }
-
-  console.log('formatAllProducts2', formatAllProducts)
 
   // res.setHeader('Cache-Control', 'public, max-age=3600') // 快取 1 小時
   successResponse({ res, data: formatAllProducts || allProducts })
