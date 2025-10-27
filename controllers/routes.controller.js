@@ -8,7 +8,7 @@ const { successResponse, errorResponse } = require('../utils/responseHandlers')
 
 const validation = {
   getRoutes: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('header agent required')
       .bail()
@@ -35,7 +35,7 @@ const validation = {
 
 const getRoutes = catchAsync(async (req, res) => {
   const userId = req.user._id
-  const agentId = req.headers['mc-agent-id']
+  const agentId = req.headers['mc-active-agent-id']
   const roleId = req.headers['mc-active-role-id']
 
   const data = await userModel
