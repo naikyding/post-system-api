@@ -9,9 +9,9 @@ const bcrypt = require('bcryptjs')
 
 const validation = {
   getUsers: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
-      .withMessage('廠商 ID 必填 (`mc-agent-id`)')
+      .withMessage('廠商 ID 必填 (`mc-active-agent-id`)')
       .bail()
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的廠商 ID (`header.mc-agents-id`)'),
@@ -183,7 +183,7 @@ const validation = {
 }
 
 const getUsers = catchAsync(async (req, res) => {
-  const agentId = req.headers['mc-agent-id']
+  const agentId = req.headers['mc-active-agent-id']
 
   // 查詢符合 agentId 的使用者
   const users = await usersModel
