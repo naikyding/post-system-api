@@ -188,6 +188,7 @@ const createMenu = catchAsync(async (req, res) => {
     'path',
     'component',
     'parentId',
+    'redirect',
   ]
 
   const data = allowedFields.reduce((acc, cur) => {
@@ -227,6 +228,7 @@ const patchMenu = catchAsync(async (req, res) => {
     'routeName',
     'path',
     'component',
+    'redirect',
   ]
 
   // 過濾欄位

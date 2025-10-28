@@ -75,7 +75,7 @@ const validation = {
   ],
 
   getRoles: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('「商家」必填')
       .bail()
@@ -89,7 +89,7 @@ const validation = {
   ],
 
   createRole: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('「商家」必填')
       .bail()
@@ -308,7 +308,7 @@ const validation = {
 }
 
 const getRoles = catchAsync(async (req, res) => {
-  const agentId = req.headers['mc-agent-id']
+  const agentId = req.headers['mc-active-agent-id']
   const query = req.query.agent
     ? {
         dataScopeRefs: agentId,
@@ -326,7 +326,7 @@ const getRoles = catchAsync(async (req, res) => {
 
 const createRole = catchAsync(async (req, res) => {
   const userId = req.user.id
-  const agentId = req.headers['mc-agent-id']
+  const agentId = req.headers['mc-active-agent-id']
 
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return errorResponse({

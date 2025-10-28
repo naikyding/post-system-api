@@ -7,7 +7,7 @@ const { successResponse } = require('../utils/responseHandlers')
 
 const validation = {
   getMarkers: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('「商家」必填')
       .bail()
@@ -60,7 +60,7 @@ const validation = {
   ],
 
   deleteMarker: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('「商家」必填')
       .bail()
@@ -86,7 +86,7 @@ const validation = {
   ],
 
   patchMarker: [
-    header('mc-agent-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
       .withMessage('「商家」必填')
       .bail()
@@ -120,7 +120,7 @@ const validation = {
       .custom(async (marker, { req }) => {
         const matchMarkerItem = await markersModel.findOne({
           name: marker,
-          agent: req.headers['mc-agent-id'],
+          agent: req.headers['mc-active-agent-id'],
         })
 
         if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
@@ -129,7 +129,7 @@ const validation = {
 }
 
 const getMarkersList = catchAsync(async (req) => {
-  const agentId = req.headers['mc-agent-id'] || req.body.agent
+  const agentId = req.headers['mc-active-agent-id'] || req.body.agent
   const markersList = await markersModel
     .find({
       agent: agentId,
