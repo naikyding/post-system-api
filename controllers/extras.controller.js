@@ -178,7 +178,6 @@ const createExtra = catchAsync(async (req, res, next) => {
 })
 
 const deleteExtra = catchAsync(async (req, res, next) => {
-  console.log(123)
   return getExtras(req, res, next)
 })
 
