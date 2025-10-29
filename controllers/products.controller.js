@@ -6,6 +6,7 @@ const { ObjectId } = require('mongoose').Types
 
 const { successResponse } = require('../utils/responseHandlers')
 const { body, validationResult, param, header } = require('express-validator')
+const { headers } = require('../utils/requestValidation')
 
 const validation = {
   getProduct: [
@@ -27,17 +28,7 @@ const validation = {
   ],
 
   createProduct: [
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('`id` 不存在')
-      }),
+    headers.mcActiveAgentId(),
 
     body('name')
       .exists() // 欄位存在
@@ -112,24 +103,42 @@ const validation = {
       .withMessage('`price` 不可為 0'),
 
     body('extras')
-      .exists() // 欄位存在
-      .withMessage('欄位 `extras` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
+      .optional() // extras 可以不傳，但如果有傳就要驗證
+      .isArray()
+      .withMessage('`配料`格式錯誤 (必須是陣列)'),
 
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
+    body('extras.*') // 驗證陣列內每個元素
+      .isMongoId()
+      .withMessage('`配料` 中必須是有效的 ObjectId'),
 
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
-      }),
+    body('extras').custom(async (extrasIdArray, { req }) => {
+      // 若非陣列
+      if (!Array.isArray(extrasIdArray)) return true
+
+      // 如果前面已經有錯誤，這裡就不要再查 DB
+      if (validationResult(req).errors.length > 0) return true
+
+      const matchItems = await extrasModel.find({
+        _id: { $in: extrasIdArray },
+      })
+
+      if (matchItems.length !== extrasIdArray.length) {
+        throw new Error('`extras` 中，有不存在的 ID')
+      }
+
+      // agent 不存在的配料
+      const invalidExtrasItem = matchItems.find(
+        (extras) =>
+          !extras.agents.some(
+            (agentId) =>
+              String(agentId) === String(req.headers['mc-active-agent-id'])
+          )
+      )
+
+      if (invalidExtrasItem) throw new Error('商家中不存在的配料!')
+
+      return true
+    }),
   ],
 
   updateProduct: [
@@ -413,15 +422,17 @@ const getProducts = catchAsync(async (req, res) => {
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, agent, extras, price, image, status } =
-    req.body
+  const { name, type, description, extras, price, image, status } = req.body
+
+  const agent = req.agentId
+
   const createItem = await productsModel.create({
     status,
     type,
     name,
     description,
     agents: [agent],
-    extras: typeof extras === 'string' ? [extras] : extras,
+    extras,
     image,
     price,
   })
