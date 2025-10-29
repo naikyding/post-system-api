@@ -41,12 +41,15 @@ const productsSchema = new mongoose.Schema(
         ref: 'Agent',
       },
     ],
-    extras: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Extra',
-      },
-    ],
+    extras: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Extra',
+        },
+      ],
+      default: [], // 預設為空陣列
+    },
   },
   {
     versionKey: false,

@@ -12,7 +12,7 @@ const {
   updateExtra,
 } = require('../../controllers/extras.controller')
 
-router.get('/', getExtras)
+router.get('/', validation.getExtras, validateHandler, getExtras)
 router.post('/', validation.createExtra, validateHandler, createExtra)
 router.delete('/:id', validation.deleteExtra, validateHandler, deleteExtra)
 router.patch('/:id', validation.updateExtra, validateHandler, updateExtra)

@@ -1,11 +1,11 @@
 const catchAsync = require('../utils/catchAsync')
 const productsModel = require('../models/products.model')
-const agentsModel = require('../models/agents.model')
 const extrasModel = require('../models/extras.model')
 const { ObjectId } = require('mongoose').Types
 
 const { successResponse } = require('../utils/responseHandlers')
 const { body, validationResult, param, header } = require('express-validator')
+const { validateHeader, validateBody } = require('../utils/requestValidation')
 
 const validation = {
   getProduct: [
@@ -27,17 +27,7 @@ const validation = {
   ],
 
   createProduct: [
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('`id` 不存在')
-      }),
+    validateHeader.mcActiveAgentId(),
 
     body('name')
       .exists() // 欄位存在
@@ -60,7 +50,7 @@ const validation = {
             name: value,
             type: req.body.type,
             agents: {
-              $in: [req.body.agent],
+              $in: [req.agentId],
             },
           })
           if (user) throw new Error('商品已存在')
@@ -111,28 +101,11 @@ const validation = {
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
 
-    body('extras')
-      .exists() // 欄位存在
-      .withMessage('欄位 `extras` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
-
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
-
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
-      }),
+    validateBody.extras(),
   ],
 
   updateProduct: [
+    validateHeader.mcActiveAgentId(),
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
@@ -141,18 +114,6 @@ const validation = {
         const matchItem = await productsModel.findById(id)
         if (matchItem) req.matchItem = matchItem
         else throw new Error('`id` 不存在')
-      }),
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-
-        if (!matchItem) throw new Error('`id` 不存在')
       }),
 
     body('name')
@@ -176,7 +137,7 @@ const validation = {
               name: value,
               type: req.body.type,
               agents: {
-                $in: [req.body.agent],
+                $in: [req.agentId],
               },
             })
             if (user) throw new Error('商品已存在')
@@ -212,23 +173,7 @@ const validation = {
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
 
-    body('extras')
-      .optional()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 extras `id`')
-      .bail() // id 不存在
-      .custom(async (extrasIdArray) => {
-        const extrasLength =
-          typeof extrasIdArray === 'string' ? 1 : extrasIdArray.length
-
-        // 查詢是否「包含」id 群
-        const matchItems = await extrasModel.find({
-          _id: { $in: extrasIdArray },
-        })
-
-        if (matchItems.length !== extrasLength)
-          throw new Error('`extras` 中，有不存在的 ID')
-      }),
+    validateBody.extras(),
   ],
 
   deleteProduct: [
@@ -413,15 +358,17 @@ const getProducts = catchAsync(async (req, res) => {
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, agent, extras, price, image, status } =
-    req.body
+  const { name, type, description, extras, price, image, status } = req.body
+
+  const agent = req.agentId
+
   const createItem = await productsModel.create({
     status,
     type,
     name,
     description,
     agents: [agent],
-    extras: typeof extras === 'string' ? [extras] : extras,
+    extras,
     image,
     price,
   })
