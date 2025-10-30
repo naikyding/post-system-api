@@ -17,6 +17,7 @@ function buildMenuTree(menus) {
         const data = {}
 
         let allowField = [
+          '_id',
           'routeName',
           'path',
           'component',
@@ -48,6 +49,7 @@ function buildMenuTree(menus) {
     } else {
       const data = {}
       let allowField = [
+        '_id',
         'routeName',
         'path',
         'component',
