@@ -223,11 +223,11 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
     .findById(_id)
     .populate({
       path: 'agentRoles.agent',
-      select: 'name',
+      select: 'name _id image',
     })
     .populate({
       path: 'agentRoles.roles',
-      select: 'name',
+      select: 'name _id',
     })
     .select('email roles agents nickname avatar phone note')
     .lean()
