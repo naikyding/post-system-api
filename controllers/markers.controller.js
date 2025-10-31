@@ -31,7 +31,7 @@ const validation = {
         if (errorsValidate.length < 1) {
           const matchMarkerItem = await markersModel.findOne({
             name: marker,
-            agent: req.body.agent,
+            agent: req.agentId,
           })
           if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
         }
@@ -99,7 +99,7 @@ const validation = {
       .custom(async (marker, { req }) => {
         const matchMarkerItem = await markersModel.findOne({
           name: marker,
-          agent: req.headers['mc-active-agent-id'],
+          agent: req.agentId,
         })
 
         if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
