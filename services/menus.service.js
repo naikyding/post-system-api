@@ -20,6 +20,7 @@ function buildMenuTree(menus) {
           '_id',
           'routeName',
           'path',
+          'name',
           'component',
           'icon',
           'status',
@@ -51,6 +52,7 @@ function buildMenuTree(menus) {
       let allowField = [
         '_id',
         'routeName',
+        'name',
         'path',
         'component',
         'icon',
@@ -61,11 +63,7 @@ function buildMenuTree(menus) {
       ]
 
       allowField.forEach((field) => {
-        if (field === 'routeName') {
-          data['name'] = map[menu._id.toString()][field]
-        } else {
-          data[field] = map[menu._id.toString()][field]
-        }
+        data[field] = map[menu._id.toString()][field]
       })
       roots.push(data)
     }

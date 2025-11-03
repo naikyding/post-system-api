@@ -12,8 +12,16 @@ const errorCallback = ({ req, res, next, errors }) => {
       ? Object.values(errors.errors).map((item) => item.properties?.message)
       : errors.stack
 
+  if (errors.statusCode) {
+    return errorResponse({
+      res,
+      statusCode: errors.statusCode,
+      errors: errors.message,
+    })
+  }
+
   if (res)
-    errorResponse({
+    return errorResponse({
       res,
       statusCode: errorsIsExist ? 400 : undefined,
       message: errorsIsExist,

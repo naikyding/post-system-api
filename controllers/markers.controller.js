@@ -4,34 +4,13 @@ const { body, validationResult, header, param } = require('express-validator')
 const agentsModel = require('../models/agents.model')
 const markersModel = require('../models/markers.model')
 const { successResponse } = require('../utils/responseHandlers')
+const { validateHeader } = require('../utils/requestValidation')
 
 const validation = {
-  getMarkers: [
-    header('mc-active-agent-id')
-      .exists() // 欄位存在
-      .withMessage('「商家」必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('「商家」無效')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('「商家」不存在')
-      }),
-  ],
+  getMarkers: [validateHeader.mcActiveAgentId()],
 
   createMarker: [
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('「商家」必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('「商家」無效')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('「商家」不存在')
-      }),
+    validateHeader.mcActiveAgentId(),
 
     body('name')
       .exists() // 欄位存在
@@ -52,7 +31,7 @@ const validation = {
         if (errorsValidate.length < 1) {
           const matchMarkerItem = await markersModel.findOne({
             name: marker,
-            agent: req.body.agent,
+            agent: req.agentId,
           })
           if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
         }
@@ -120,7 +99,7 @@ const validation = {
       .custom(async (marker, { req }) => {
         const matchMarkerItem = await markersModel.findOne({
           name: marker,
-          agent: req.headers['mc-active-agent-id'],
+          agent: req.agentId,
         })
 
         if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
@@ -149,10 +128,11 @@ const getMarkers = catchAsync(async (req, res) => {
 })
 
 const createMarker = catchAsync(async (req, res) => {
-  const { name, agent, description } = req.body
+  const { name, description } = req.body
+  const agentId = req.agentId
   await markersModel.create({
     name,
-    agent,
+    agent: agentId,
     description,
   })
 
