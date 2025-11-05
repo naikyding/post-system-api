@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: '',
+      default: 'https://avatar.iran.liara.run/public',
     },
     phone: {
       type: String,
