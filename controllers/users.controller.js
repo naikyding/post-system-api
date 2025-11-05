@@ -202,7 +202,7 @@ const createUser = catchAsync(async (req, res) => {
   // 準備要存的資料
   const userData = {
     email,
-    password: await bcrypt.hashSync(password, 12),
+    password: bcrypt.hashSync(password, 12),
     agentRoles,
     nickname,
     avatar,
@@ -212,8 +212,10 @@ const createUser = catchAsync(async (req, res) => {
 
   // 建立使用者
   const newUser = await usersModel.create(userData)
+  const { password: _, ...userWithoutPassword } = newUser.toObject()
+
   if (newUser) {
-    successResponse({ res, data: newUser })
+    successResponse({ res, data: userWithoutPassword })
   }
 })
 
