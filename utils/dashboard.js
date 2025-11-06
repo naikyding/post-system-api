@@ -1,6 +1,7 @@
 const getAllPaymentTypeTotal = (orderData) => {
   const formatData = orderData.reduce(
     (init, cur) => {
+      console.log(cur)
       const matchItem = init[cur.status].find(
         (item) => item.type === cur.paymentType
       )
@@ -101,6 +102,14 @@ const getAllPaymentTypeTotal = (orderData) => {
         },
         {
           type: 'Line Pay',
+          orderQuantity: 0,
+          itemQuantity: 0,
+          bagQuantity: 0,
+          total: 0,
+          data: [],
+        },
+        {
+          type: null,
           orderQuantity: 0,
           itemQuantity: 0,
           bagQuantity: 0,

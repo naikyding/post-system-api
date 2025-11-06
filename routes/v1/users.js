@@ -1,9 +1,36 @@
 const express = require('express')
 const router = express.Router()
 const { auth } = require('../../utils/auth')
-const { getUserBaseInfo } = require('../../controllers/users.controller')
+const {
+  validation,
+  getUserBaseInfo,
+  getUsers,
+  createUser,
+  deleteUser,
+  updateUser,
+  updateUserPassword,
+} = require('../../controllers/users.controller')
+const validateHandler = require('../../utils/validateHandler')
+
+router.get('/', auth, validation.getUsers, validateHandler, getUsers)
+router.post('/', auth, validation.createUser, validateHandler, createUser)
+router.delete('/:id', auth, validation.deleteUser, validateHandler, deleteUser)
+router.patch('/:id', auth, validation.updateUser, validateHandler, updateUser)
+router.patch(
+  '/:id/password',
+  auth,
+  validation.updateUserPassword,
+  validateHandler,
+  updateUserPassword
+)
 
 // 取得使用者資料
-router.get('/base-info', auth, getUserBaseInfo)
+router.get(
+  '/base-info',
+  auth,
+  // validation.getUserBaseInfo,
+  // validateHandler,
+  getUserBaseInfo
+)
 
 module.exports = router

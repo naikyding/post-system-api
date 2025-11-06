@@ -2,10 +2,18 @@ const mongoose = require('mongoose')
 
 const ordersSchema = mongoose.Schema(
   {
+    // 消費者
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
-      required: [true, '欄位 `customer` 必填'],
+      // required: [true, '欄位 `customer` 必填'],
+    },
+
+    // 後台 使用者 User
+    operator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      // required: [true, '欄位 `customer` 必填'],
     },
 
     items: {
@@ -119,5 +127,14 @@ const ordersSchema = mongoose.Schema(
     timestamps: true,
   }
 )
+
+ordersSchema.pre('validate', function (next) {
+  if (!!this.customer === !!this.operator) {
+    const error = new Error('customer 或 operator 至少且只能有一個存在!')
+    error.statusCode = 400 // 自訂 HTTP 狀態碼
+    return next(error)
+  }
+  next()
+})
 
 module.exports = mongoose.model('Order', ordersSchema)

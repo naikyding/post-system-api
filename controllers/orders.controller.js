@@ -1,5 +1,5 @@
 const catchAsync = require('../utils/catchAsync')
-const { successResponse } = require('../utils/responseHandlers')
+const { successResponse, errorResponse } = require('../utils/responseHandlers')
 const {
   body,
   param,
@@ -12,22 +12,13 @@ const agentsModel = require('../models/agents.model')
 const customersModel = require('../models/customers.model')
 const productsModel = require('../models/products.model')
 const extrasModel = require('../models/extras.model')
-
+const { validateHeader } = require('../utils/requestValidation')
 const ordersModel = require('../models/orders.model')
+const usersModel = require('../models/users.model')
 
 const validation = {
   getOrderList: [
-    query('agent')
-      .exists() // 欄位存在
-      .withMessage('query `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `agent id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('`agent id` 不存在')
-      }),
+    validateHeader.mcActiveAgentId(),
 
     query('limit')
       .optional()
@@ -65,28 +56,28 @@ const validation = {
   ],
 
   createOrder: [
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `agent id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentsModel.findById(id)
-        if (!matchItem) throw new Error('`agent id` 不存在')
-      }),
+    validateHeader.mcActiveAgentId(),
 
     body('customer')
-      .exists() // 欄位存在
-      .withMessage('欄位 `customer` 必填')
+      .optional()
       .bail()
       .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `customer id`')
+      .withMessage('無效的 消費者 id`')
       .bail() // id 不存在
       .custom(async (id) => {
-        const matchItem = await customersModel.findById(id)
-        if (!matchItem) throw new Error('`customer id` 不存在')
+        const matchCustomer = await customersModel.findById(id)
+        if (!matchCustomer) throw new Error('`消費者` 不存在')
+      }),
+
+    body('operator')
+      .optional()
+      .bail()
+      .isMongoId() // 是否為 mongo id
+      .withMessage('無效的 使用者 id`')
+      .bail() // id 不存在
+      .custom(async (id) => {
+        const matchUser = await usersModel.findById(id)
+        if (!matchUser) throw new Error('`使用者` 不存在')
       }),
 
     // 驗證配料加總金額
@@ -300,13 +291,20 @@ const validation = {
   createOrderItem: [],
 
   deleteOrder: [
+    validateHeader.mcActiveAgentId(),
+
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
       .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await ordersModel.findByIdAndDelete(id)
-        if (!matchItem) throw new Error('`id` 不存在')
+      .custom(async (id, { req }) => {
+        if (!req.agentId) return
+
+        const matchItem = await ordersModel.findOneAndDelete({
+          _id: id,
+          agent: req.agentId,
+        })
+        if (!matchItem) throw new Error('資料不存在')
       }),
   ],
 
@@ -436,6 +434,8 @@ const validation = {
   ],
 
   updateOrderList: [
+    validateHeader.mcActiveAgentId(),
+
     body('isPaid')
       .optional()
       .notEmpty()
@@ -659,7 +659,6 @@ const validation = {
       .withMessage('無效的 `id`')
       .bail()
       .custom(async (id, { req }) => {
-        console.log('params id')
         const errorsValidate = validationResult(req)
           .formatWith((errors) => errors.msg)
           .array()
@@ -678,17 +677,21 @@ const validation = {
           items,
         } = req.body
 
-        const matchOrder = await ordersModel.findByIdAndUpdate(id, {
-          status, // 更新訂單狀態
-          isPaid,
-          paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
-          mobileNoThreeDigits,
-          note,
-          totalPrice,
-          items,
-        })
+        console.log(id, req.agentId)
+        const matchOrder = await ordersModel.findOneAndUpdate(
+          { _id: id, agent: req.agentId },
+          {
+            status, // 更新訂單狀態
+            isPaid,
+            paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
+            mobileNoThreeDigits,
+            note,
+            totalPrice,
+            items,
+          }
+        )
 
-        if (!matchOrder) throw new Error('`id` 不存在')
+        if (!matchOrder) throw new Error('資料不存在')
       }),
   ],
 
@@ -767,7 +770,6 @@ const getOrderList = catchAsync(async (req, res) => {
     filterContent = returnAtQuery(filterContent, from, to)
   }
 
-  console.log('filterContent => ', filterContent)
   let getOrderListQuery = ordersModel.find(filterContent)
 
   const sort = () => {
@@ -838,6 +840,26 @@ const getOrderList = catchAsync(async (req, res) => {
 })
 
 const createOrder = catchAsync(async (req, res) => {
+  const agent = req.agentId
+  const {
+    customer,
+    operator,
+    totalPrice,
+    note,
+    isPaid,
+    paymentType,
+    mobileNoThreeDigits,
+    scheduledAt,
+  } = req.body
+
+  if (!!customer === !!operator) {
+    return errorResponse({
+      res,
+      statusCode: 400,
+      message: '欄位 `customer` 或 `operator` 至少且只能有一個存在!',
+    })
+  }
+
   let computedItemsData = req.body.items.reduce((acc, cur) => {
     let matchCurExtrasNum = 0
     let matchCurMarkersNum = 0
@@ -893,19 +915,9 @@ const createOrder = catchAsync(async (req, res) => {
     else return (acc = [...acc, cur])
   }, [])
 
-  const {
-    customer,
-    totalPrice,
-    agent,
-    note,
-    isPaid,
-    paymentType,
-    mobileNoThreeDigits,
-    scheduledAt,
-  } = req.body
-
   const createdOrder = await ordersModel.create({
     customer,
+    operator,
     totalPrice,
     agent,
     mobileNoThreeDigits,

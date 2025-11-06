@@ -4,20 +4,12 @@ const agentModel = require('../models/agents.model')
 
 const { body, validationResult, param } = require('express-validator')
 const { successResponse } = require('../utils/responseHandlers')
+const { validateHeader } = require('../utils/requestValidation')
 
 const validation = {
+  getExtras: [validateHeader.mcActiveAgentId(false)],
   createExtra: [
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 `id`')
-      .bail() // id 不存在
-      .custom(async (id) => {
-        const matchItem = await agentModel.findById(id)
-        if (!matchItem) throw new Error('`id` 不存在')
-      }),
+    validateHeader.mcActiveAgentId(),
 
     body('name')
       .exists() // 欄位存在
@@ -40,7 +32,7 @@ const validation = {
             name: value,
             type: req.body.type,
             agents: {
-              $in: [req.body.agent],
+              $in: [req.agentId],
             },
           })
           if (user) throw new Error('廠家的配料已存在')
@@ -81,6 +73,7 @@ const validation = {
   ],
 
   deleteExtra: [
+    validateHeader.mcActiveAgentId(false),
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
@@ -103,18 +96,7 @@ const validation = {
         req.matchExtraItem = matchExtraItem
       }),
 
-    body('agent')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的 agent `id`')
-      .bail() // id 不存在
-      .custom(async (agentId, { req }) => {
-        const isIncludes = req.matchExtraItem.agents.includes(agentId)
-        if (!isIncludes) throw new Error('`agent id` 權限不存在')
-        return true
-      }),
+    validateHeader.mcActiveAgentId(),
 
     body('type')
       .optional()
@@ -143,14 +125,12 @@ const validation = {
         if (errorsValidate.length < 1) {
           if (req.matchExtraItem.name === req.body.name) return true
           else {
+            console.log(req.agentId, 'req.agentId')
             const extraItem = await extrasModel.findOne({
               name: value,
-              type: req.body.type,
-              agents: {
-                $in: [req.body.agent],
-              },
+              agents: req.agentId,
             })
-            if (extraItem) throw new Error('商品已存在')
+            if (extraItem) throw new Error('名稱已存在')
           }
         }
       }),
@@ -176,28 +156,29 @@ const validation = {
 }
 
 const getExtras = catchAsync(async (req, res, next) => {
-  const extrasData = await extrasModel.find()
+  const extrasData = await extrasModel.find(
+    req.agentId ? { agents: req.agentId } : {}
+  )
 
   successResponse({ res, data: extrasData })
 })
 
 const createExtra = catchAsync(async (req, res, next) => {
-  const { name, description, price, type, agent } = req.body
+  const { name, description, price, type } = req.body
 
   const extrasData = await extrasModel.create({
     name,
     description,
     price,
     type,
-    agents: [agent],
+    agents: [req.agentId],
   })
 
   if (extrasData) getExtras(req, res, next)
 })
 
 const deleteExtra = catchAsync(async (req, res, next) => {
-  const extrasData = await extrasModel.find()
-  successResponse({ res, data: extrasData })
+  return getExtras(req, res, next)
 })
 
 const updateExtra = catchAsync(async (req, res, next) => {

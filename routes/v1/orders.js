@@ -42,7 +42,14 @@ router.patch(
   updateOrderItem
 )
 
-router.delete('/:id', validation.deleteOrder, validateHandler, deleteOrder)
+router.delete(
+  '/:id',
+  auth,
+  validation.deleteOrder,
+  validateHandler,
+  deleteOrder
+)
+
 router.delete(
   '/item/:id',
   auth,

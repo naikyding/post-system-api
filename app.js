@@ -37,6 +37,19 @@ app.use('/', indexRouter)
 // v1 APIs
 app.use('/v1', v1Routes)
 
+app.use(express.json())
+
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return errorResponse({
+      res,
+      statusCode: 400,
+      message: '資料格式錯誤',
+    })
+  }
+  next()
+})
+
 // catch 404 and forward to error handler
 app.use((req, res, next) => errorResponse({ res, statusCode: 404 }))
 

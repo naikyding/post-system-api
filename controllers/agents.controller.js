@@ -51,6 +51,8 @@ const deleteAgent = catchAsync(async (req, res, next) => {
   successResponse({ res, data: agentsData })
 })
 
+const updateAgent = catchAsync(async (req, res, next) => {})
+
 module.exports = {
   validation,
 

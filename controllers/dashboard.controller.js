@@ -9,9 +9,9 @@ const {
 
 const validation = {
   getBaseData: [
-    header('mc-agents-id')
+    header('mc-active-agent-id')
       .exists() // 欄位存在
-      .withMessage('header `mc-agents-id` 必填')
+      .withMessage('header `mc-active-agent-id` 必填')
       .bail()
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `agent id`')

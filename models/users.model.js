@@ -15,15 +15,14 @@ const userSchema = new mongoose.Schema(
       {
         agent: {
           type: mongoose.Schema.Types.ObjectId,
-          required: [true, 'agents 是必填項目'],
           ref: 'Agent',
+          required: [true, '商家 `agent` 是必填項目'],
         },
-
         roles: [
           {
             type: mongoose.Schema.Types.ObjectId,
-            required: [true, 'agents 是必填項目'],
             ref: 'Role',
+            required: [true, '角色 `role` 是必填項目'],
           },
         ],
       },
@@ -35,7 +34,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: '',
+      default: 'https://avatar.iran.liara.run/public',
     },
     phone: {
       type: String,
