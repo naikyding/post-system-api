@@ -32,7 +32,6 @@ const getAllPaymentTypeTotal = (orderData) => {
             mobile: cur.mobileNoThreeDigits,
           },
         ]
-        console.log(123)
       } else {
         init[cur.status] = [
           ...init[cur.status],
