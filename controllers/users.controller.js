@@ -185,10 +185,10 @@ const validation = {
 const getUsers = catchAsync(async (req, res) => {
   const agentId = req.headers['mc-active-agent-id']
 
-  // 查詢符合 agentId 的使用者
+  // ?all=true -> find全部 / else 查詢符合 agentId 的使用者
   const users = await usersModel
-    .find({ 'agentRoles.agent': agentId })
-    .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 name
+    .find(req.query.all ? {} : { 'agentRoles.agent': agentId })
+    .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 namec
     .populate('agentRoles.roles', 'name') // 可選：帶出 role 的 name
     .lean()
 
