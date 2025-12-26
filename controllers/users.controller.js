@@ -188,7 +188,7 @@ const getUsers = catchAsync(async (req, res) => {
   // ?all=true -> find全部 / else 查詢符合 agentId 的使用者
   const users = await usersModel
     .find(req.query.all ? {} : { 'agentRoles.agent': agentId })
-    .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 namec
+    .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 name
     .populate('agentRoles.roles', 'name') // 可選：帶出 role 的 name
     .lean()
 

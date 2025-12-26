@@ -436,6 +436,15 @@ const validation = {
   updateOrderList: [
     validateHeader.mcActiveAgentId(),
 
+    // 預定時間
+    body('scheduledAt')
+      .optional() // 有欄位才驗證
+      .notEmpty()
+      .withMessage('scheduledAt 不可為空值')
+      .bail()
+      .isISO8601()
+      .withMessage('`scheduledAt` 須為日期格式'),
+
     body('isPaid')
       .optional()
       .notEmpty()
@@ -675,9 +684,9 @@ const validation = {
           note,
           totalPrice,
           items,
+          scheduledAt,
         } = req.body
 
-        console.log(id, req.agentId)
         const matchOrder = await ordersModel.findOneAndUpdate(
           { _id: id, agent: req.agentId },
           {
@@ -688,6 +697,7 @@ const validation = {
             note,
             totalPrice,
             items,
+            scheduledAt,
           }
         )
 
