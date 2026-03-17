@@ -873,6 +873,7 @@ const createOrder = catchAsync(async (req, res) => {
   let computedItemsData = req.body.items.reduce((acc, cur) => {
     let matchCurExtrasNum = 0
     let matchCurMarkersNum = 0
+    let matchNotes = acc.notes === cur.notes
 
     const curExtrasLength = cur.extrasData.length
     const curMarkersLength = cur.markers.length
@@ -913,7 +914,8 @@ const createOrder = catchAsync(async (req, res) => {
         .forEach((item) => {
           if (
             item.product === cur.product &&
-            matchCurMarkersNum === curMarkersLength
+            matchCurMarkersNum === curMarkersLength &&
+            matchNotes
           ) {
             sameItem = true
             item.quantity += cur.quantity
