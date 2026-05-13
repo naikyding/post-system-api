@@ -65,11 +65,12 @@ const validation = {
       .withMessage('`price` 不可為空值')
       .bail()
       .isNumeric() // 為數格式 "123" 會過
-      .withMessage('`price` 必須為數字格式')
-      .bail()
-      .not()
-      .isIn([0, '0'])
-      .withMessage('`price` 不可為 0'),
+      .withMessage('`price` 必須為數字格式'),
+    // 可以為 0
+    // .bail()
+    // .not()
+    // .isIn([0, '0'])
+    // .withMessage('`price` 不可為 0'),
   ],
 
   deleteExtra: [
