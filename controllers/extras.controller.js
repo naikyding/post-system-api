@@ -48,6 +48,17 @@ const validation = {
       .bail()
       .isString() // 為字串格式
       .withMessage('`type` 必須為字串格式'),
+
+    body('status')
+      .exists() // 欄位存在
+      .withMessage('欄位 `status` 必填')
+      .bail() // 不可為空
+      .notEmpty()
+      .withMessage('`status` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`status` 必須為字串格式'),
+
     body('description')
       .exists() // 欄位存在
       .withMessage('欄位 `description` 必填')
@@ -107,6 +118,14 @@ const validation = {
       .isString() // 為字串格式
       .withMessage('`type` 必須為字串格式'),
 
+    body('status')
+      .optional()
+      .notEmpty()
+      .withMessage('`status` 不可為空值')
+      .bail()
+      .isString() // 為字串格式
+      .withMessage('`status` 必須為字串格式'),
+
     body('name')
       .optional()
       .notEmpty()
@@ -165,13 +184,14 @@ const getExtras = catchAsync(async (req, res, next) => {
 })
 
 const createExtra = catchAsync(async (req, res, next) => {
-  const { name, description, price, type } = req.body
+  const { name, description, price, type, status } = req.body
 
   const extrasData = await extrasModel.create({
     name,
     description,
     price,
     type,
+    status,
     agents: [req.agentId],
   })
 
@@ -183,7 +203,7 @@ const deleteExtra = catchAsync(async (req, res, next) => {
 })
 
 const updateExtra = catchAsync(async (req, res, next) => {
-  const { name, description, type, image, price } = req.body
+  const { name, description, type, image, price, status } = req.body
   const id = req.params.id
 
   const resData = await extrasModel.findByIdAndUpdate(id, {
@@ -191,6 +211,7 @@ const updateExtra = catchAsync(async (req, res, next) => {
     description,
     type,
     image,
+    status,
     price,
   })
 
