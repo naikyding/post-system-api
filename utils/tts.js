@@ -13,7 +13,7 @@ if (!fs.existsSync(tempDir)) {
 const createTTS = async (text) => {
   const tts = new EdgeTTS({ voice: 'zh-TW-HsiaoChenNeural' })
 
-  const fileName = `${crypto.randomUUID()}.mp3`
+  const fileName = `${text}.mp3`
 
   const filePath = path.join(tempDir, fileName)
 
