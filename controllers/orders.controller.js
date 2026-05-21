@@ -33,6 +33,7 @@ const validation = {
         'inProgress', // 進行中
         'completed', // 完成
         'cancelled', // 取消
+        'readyForPickup', // 待取餐
       ])
       .withMessage('query `status` 格式錯誤'),
     query('offset')
@@ -467,6 +468,7 @@ const validation = {
           'inProgress', // 進行中
           'completed', // 完成
           'cancelled', // 取消
+          'readyForPickup', // 待取餐
         ]
         if (!statusFormatAry.includes(status))
           throw new Error('`status` 格式錯誤')
@@ -997,6 +999,7 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
       pending: [],
       completed: [],
       cancelled: [],
+      readyForPickup: [],
     }
   )
 
@@ -1047,12 +1050,19 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
     (item) => item.mobileNoThreeDigits === mobile
   )
 
+  const matchInReadyForPickupList = orderListAll.readyForPickup.filter(
+    (item) => item.mobileNoThreeDigits === mobile
+  )
   const matchInCompletedList = orderListAll.completed.filter(
     (item) => item.mobileNoThreeDigits === mobile
   )
 
   // -- 沒資料
-  if (matchInPendingList.length < 1 && matchInCompletedList.length < 1)
+  if (
+    matchInPendingList.length < 1 &&
+    matchInCompletedList.length < 1 &&
+    matchInReadyForPickupList.length < 1
+  )
     return successResponse({
       res,
       data: '查無此訂單',
@@ -1094,6 +1104,7 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
     data: {
       pending: [...mappingListByMobile(mobile, orderListAll['pending'])],
       completed: matchInCompletedList,
+      readyForPickup: matchInReadyForPickupList,
     },
   })
 })

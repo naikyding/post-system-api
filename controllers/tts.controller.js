@@ -13,8 +13,6 @@ const postTts = catchAsync(async (req, res) => {
 
   // 告訴瀏覽器這是 mp3 音訊
   res.setHeader('Content-Type', 'audio/mpeg')
-  // 避免 cache
-  res.setHeader('Cache-Control', 'no-store')
 
   const audioPath = await createTTS(text)
   const stream = fs.createReadStream(audioPath)
@@ -25,10 +23,9 @@ const postTts = catchAsync(async (req, res) => {
   let isDeleted = false
 
   const cleanup = () => {
-    if (isDeleted) return
-
-    isDeleted = true
-    deleteTTS(audioPath)
+    // if (isDeleted) return
+    // isDeleted = true
+    // deleteTTS(audioPath)
   }
 
   // response 傳送完成
