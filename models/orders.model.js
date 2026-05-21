@@ -93,6 +93,7 @@ const ordersSchema = mongoose.Schema(
         'inProgress', // 進行中
         'completed', // 完成
         'cancelled', // 取消
+        'readyForPickup', // 完成，但還沒取餐
       ],
       default: 'pending',
     },
