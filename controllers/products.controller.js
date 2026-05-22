@@ -1,6 +1,8 @@
 const catchAsync = require('../utils/catchAsync')
 const productsModel = require('../models/products.model')
 const extrasModel = require('../models/extras.model')
+const productCategoriesModel = require('../models/productCategory.model')
+
 const { ObjectId } = require('mongoose').Types
 
 const { successResponse } = require('../utils/responseHandlers')
@@ -68,12 +70,7 @@ const validation = {
       .withMessage('`status` 必須為字串格式'),
 
     body('type')
-      .exists() // 欄位存在
-      .withMessage('欄位 `type` 必填')
-      .bail() // 不可為空
-      .notEmpty()
-      .withMessage('`type` 不可為空值')
-      .bail()
+      .optional()
       .isString() // 為字串格式
       .withMessage('`type` 必須為字串格式'),
 
@@ -100,6 +97,21 @@ const validation = {
       .not()
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
+
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await productCategoriesModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
 
     validateBody.extras(),
   ],
@@ -172,6 +184,20 @@ const validation = {
       .not()
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await productCategoriesModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
 
     validateBody.extras(),
   ],
@@ -287,6 +313,10 @@ const getProducts = catchAsync(async (req, res) => {
       path: 'extras',
       select: '-createdAt -updatedAt',
     })
+    .populate({
+      path: 'category',
+      select: '-createdAt -updatedAt',
+    })
     .sort({ price: 1 })
     .lean() // 資訊不在擁有 mongoose 嵌入操作，為一般 js 物件
   // const cloneProduct = JSON.parse(JSON.stringify(allProducts))
@@ -358,7 +388,8 @@ const getProducts = catchAsync(async (req, res) => {
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, extras, price, image, status } = req.body
+  const { name, type, description, extras, price, image, status, category } =
+    req.body
 
   const agent = req.agentId
 
@@ -371,6 +402,7 @@ const createProduct = catchAsync(async (req, res) => {
     extras,
     image,
     price,
+    category,
   })
 
   if (createItem) return getProducts(req, res)
@@ -400,7 +432,7 @@ const deleteProductExtrasItem = catchAsync(async (req, res) => {
 })
 
 const updateProduct = catchAsync(async (req, res) => {
-  const { name, type, price, extras, description, status } = req.body
+  const { name, type, price, extras, description, status, category } = req.body
 
   const resData = await productsModel.findByIdAndUpdate(req.params.id, {
     name,
@@ -409,6 +441,7 @@ const updateProduct = catchAsync(async (req, res) => {
     extras,
     description,
     status,
+    category,
   })
 
   if (resData) return getProducts(req, res)

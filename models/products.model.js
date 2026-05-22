@@ -6,9 +6,9 @@ const productsSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'available', // 上架中
-        'hidden', // 下架／隱藏
-        'archived', // 封存／停用
+        'active', // 上架
+        'inactive', // 下架
+        'deprecated', // 棄用
       ],
       // required: [true, '商品狀態是必填項目'],
       default: 'inactive',
@@ -17,7 +17,6 @@ const productsSchema = new mongoose.Schema(
     // 舊分類（過渡期保留）
     type: {
       type: String,
-      required: [true, 'type 是必填項目'],
     },
 
     // 新分類（正式關聯）
