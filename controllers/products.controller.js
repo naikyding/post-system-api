@@ -302,6 +302,107 @@ const validation = {
   ],
 }
 
+const getProductsForMenu = catchAsync(async (req, res) => {
+  let formatAllProducts = []
+
+  const allProducts = await productsModel
+    .find({
+      agents: req.headers['mc-active-agent-id'],
+    })
+    .select('-createdAt -updatedAt')
+    .populate({
+      path: 'extras',
+      select: '-createdAt -updatedAt',
+    })
+    .populate({
+      path: 'category',
+      select: '-createdAt -updatedAt',
+      match: {
+        status: 'available',
+      },
+    })
+    .sort({
+      price: 1,
+    })
+    .lean()
+
+  // extras 分組
+  const formatExtrasByType = (extras = []) => {
+    const result = extras.reduce((acc, cur) => {
+      const matchItem = acc.find((item) => item.type === cur.type)
+
+      if (matchItem) {
+        matchItem.items.push(cur)
+
+        return acc
+      }
+
+      // 加購永遠排第一
+      if (cur.type === '加購') {
+        return [
+          {
+            type: cur.type,
+            items: [cur],
+          },
+          ...acc,
+        ]
+      }
+
+      return [
+        ...acc,
+        {
+          type: cur.type,
+          items: [cur],
+        },
+      ]
+    }, [])
+
+    // 加購移到最後
+    if (result.length > 0) {
+      result.push(result.shift())
+    }
+
+    return result
+  }
+
+  // product 依 category 分組
+  formatAllProducts = allProducts.reduce((acc, cur) => {
+    cur.extras = formatExtrasByType(cur.extras)
+
+    // category 不存在時略過
+    if (!cur.category) return acc
+
+    const matchCategoryItem = acc.find(
+      (item) => item.category._id.toString() === cur.category._id.toString()
+    )
+
+    if (matchCategoryItem) {
+      matchCategoryItem.items.push(cur)
+
+      return acc
+    }
+
+    return [
+      ...acc,
+      {
+        category: cur.category,
+        items: [cur],
+      },
+    ]
+  }, [])
+
+  // category sort 排序
+  formatAllProducts.sort((a, b) => {
+    return (a.category.sort || 0) - (b.category.sort || 0)
+  })
+
+  successResponse({
+    res,
+    data: formatAllProducts,
+  })
+})
+
+// 原本
 const getProducts = catchAsync(async (req, res) => {
   let formatAllProducts
 
@@ -451,6 +552,7 @@ module.exports = {
   validation,
 
   getProducts,
+  getProductsForMenu,
   createProduct,
   deleteProduct,
   updateProduct,

@@ -7,6 +7,7 @@ const {
   validation,
 
   getProducts,
+  getProductsForMenu,
   createProduct,
   deleteProduct,
   updateProduct,
@@ -16,6 +17,13 @@ const {
 } = require('../../controllers/products.controller')
 
 router.get('/', auth, validation.getProduct, validateHandler, getProducts)
+router.get(
+  '/menu',
+  auth,
+  validation.getProduct,
+  validateHandler,
+  getProductsForMenu
+)
 
 router.post('/', auth, validation.createProduct, validateHandler, createProduct)
 router.delete(
