@@ -176,11 +176,26 @@ const validation = {
 }
 
 const getExtras = catchAsync(async (req, res, next) => {
-  const extrasData = await extrasModel.find(
-    req.agentId ? { agents: req.agentId } : {}
-  )
+  const { status } = req.query
 
-  successResponse({ res, data: extrasData })
+  const query = {}
+
+  // agent
+  if (req.agentId) {
+    query.agents = req.agentId
+  }
+
+  // status
+  if (status) {
+    query.status = status
+  }
+
+  const extrasData = await extrasModel.find(query)
+
+  successResponse({
+    res,
+    data: extrasData,
+  })
 })
 
 const createExtra = catchAsync(async (req, res, next) => {
