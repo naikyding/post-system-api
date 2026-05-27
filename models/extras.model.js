@@ -4,7 +4,6 @@ const extrasSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      required: [true, 'type 是必填項目'],
     },
 
     // 上架狀態
@@ -17,6 +16,13 @@ const extrasSchema = new mongoose.Schema(
       ],
       // required: [true, '商品狀態是必填項目'],
       default: 'inactive',
+    },
+
+    // 新分類（正式關聯）
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ExtrasCategory',
+      default: null,
     },
 
     name: {

@@ -40,9 +40,7 @@ const validation = {
       }),
 
     body('type')
-      .exists() // 欄位存在
-      .withMessage('欄位 `type` 必填')
-      .bail() // 不可為空
+      .optional()
       .notEmpty()
       .withMessage('`type` 不可為空值')
       .bail()
@@ -190,7 +188,13 @@ const getExtras = catchAsync(async (req, res, next) => {
     query.status = status
   }
 
-  const extrasData = await extrasModel.find(query)
+  const extrasData = await extrasModel.find(query).populate({
+    path: 'category',
+    select: '-createdAt -updatedAt',
+    match: {
+      status: 'available',
+    },
+  })
 
   successResponse({
     res,
@@ -199,7 +203,7 @@ const getExtras = catchAsync(async (req, res, next) => {
 })
 
 const createExtra = catchAsync(async (req, res, next) => {
-  const { name, description, price, type, status } = req.body
+  const { name, description, price, type, status, category } = req.body
 
   const extrasData = await extrasModel.create({
     name,
@@ -207,6 +211,7 @@ const createExtra = catchAsync(async (req, res, next) => {
     price,
     type,
     status,
+    category,
     agents: [req.agentId],
   })
 
@@ -218,12 +223,13 @@ const deleteExtra = catchAsync(async (req, res, next) => {
 })
 
 const updateExtra = catchAsync(async (req, res, next) => {
-  const { name, description, type, image, price, status } = req.body
+  const { name, description, type, image, price, status, category } = req.body
   const id = req.params.id
 
   const resData = await extrasModel.findByIdAndUpdate(id, {
     name,
     description,
+    category,
     type,
     image,
     status,
