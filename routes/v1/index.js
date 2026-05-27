@@ -17,6 +17,7 @@ const operationsRouter = require('./operations')
 const routesRouter = require('./routes')
 const ttsRouter = require('./tts')
 const productCategoriesRouter = require('./product-categories')
+const extraCategoriesRouter = require('./extra-categories')
 
 router.use('/', indexRouter)
 router.use('/orders', orderRouter)
@@ -34,5 +35,6 @@ router.use('/operations', operationsRouter)
 router.use('/routes', routesRouter)
 router.use('/tts', ttsRouter)
 router.use('/product-categories', productCategoriesRouter)
+router.use('/extra-categories', extraCategoriesRouter)
 
 module.exports = router
