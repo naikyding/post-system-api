@@ -1023,6 +1023,11 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
     }
   }
 
+  const bagIds = [
+    '6a13f75046635fb4a4232154', // 大袋
+    '6a13f73c46635fb4a4232148', // 小袋
+  ]
+
   // 預設 (沒有手機號碼)
   if (!mobile)
     return successResponse({
@@ -1034,7 +1039,7 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
             ...pendingComputed(
               orderListAll['pending'].reduce((acc, cur) => {
                 return (acc += cur.items.reduce((acc, cur) => {
-                  if (cur.product.type !== '塑膠提袋')
+                  if (!bagIds.includes(cur.product._id.toString()))
                     return (acc += cur.quantity)
                   return acc
                 }, 0))
@@ -1091,7 +1096,8 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
 
       waiting.listQuantity++
       waiting.itemsQuantity += cur.items.reduce((acc, cur) => {
-        if (cur.product.type !== '塑膠提袋') return (acc += cur.quantity)
+        if (!bagIds.includes(cur.product._id.toString()))
+          return (acc += cur.quantity)
         return acc
       }, 0)
 

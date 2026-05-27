@@ -313,6 +313,13 @@ const getProductsForMenu = catchAsync(async (req, res) => {
     .populate({
       path: 'extras',
       select: '-createdAt -updatedAt',
+      populate: {
+        path: 'category',
+        select: '-createdAt -updatedAt',
+        match: {
+          status: 'available',
+        },
+      },
     })
     .populate({
       path: 'category',
@@ -326,10 +333,14 @@ const getProductsForMenu = catchAsync(async (req, res) => {
     })
     .lean()
 
-  // extras 分組
-  const formatExtrasByType = (extras = []) => {
+  const formatExtrasByCategory = (extras = []) => {
     const result = extras.reduce((acc, cur) => {
-      const matchItem = acc.find((item) => item.type === cur.type)
+      // category 不存在略過
+      if (!cur.category) return acc
+
+      const matchItem = acc.find(
+        (item) => item.category._id.toString() === cur.category._id.toString()
+      )
 
       if (matchItem) {
         matchItem.items.push(cur)
@@ -337,37 +348,26 @@ const getProductsForMenu = catchAsync(async (req, res) => {
         return acc
       }
 
-      // 加購永遠排第一
-      if (cur.type === '加購') {
-        return [
-          {
-            type: cur.type,
-            items: [cur],
-          },
-          ...acc,
-        ]
-      }
-
       return [
         ...acc,
         {
-          type: cur.type,
+          category: cur.category,
           items: [cur],
         },
       ]
     }, [])
 
-    // 加購移到最後
-    if (result.length > 0) {
-      result.push(result.shift())
-    }
+    // category sort 排序
+    result.sort((a, b) => {
+      return (a.category.sort || 0) - (b.category.sort || 0)
+    })
 
     return result
   }
 
   // product 依 category 分組
   formatAllProducts = allProducts.reduce((acc, cur) => {
-    cur.extras = formatExtrasByType(cur.extras)
+    cur.extras = formatExtrasByCategory(cur.extras)
 
     // category 不存在時略過
     if (!cur.category) return acc
