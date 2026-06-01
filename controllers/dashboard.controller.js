@@ -127,9 +127,16 @@ const getBaseData = async (req, res, next) => {
       path: 'items',
       populate: {
         path: 'extrasData',
-        populate: {
-          path: 'extraItem',
-        },
+        populate: [
+          {
+            path: 'extraItem',
+            populate: [
+              {
+                path: 'category',
+              },
+            ],
+          },
+        ],
       },
     })
     .lean()
