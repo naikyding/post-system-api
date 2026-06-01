@@ -45,6 +45,10 @@ const validation = {
       .withMessage('無效的 `status`'),
 
     body('sort').optional().isNumeric().withMessage('`sort` 必須為數字格式'),
+    body('includeInDashboard')
+      .optional()
+      .isBoolean()
+      .withMessage('`includeInDashboard` 必須為布林值'),
   ],
 
   // 更新分類
@@ -97,6 +101,11 @@ const validation = {
       .withMessage('無效的 `status`'),
 
     body('sort').optional().isNumeric().withMessage('`sort` 必須為數字格式'),
+
+    body('includeInDashboard')
+      .optional()
+      .isBoolean()
+      .withMessage('`includeInDashboard` 必須為布林值'),
   ],
 
   // 刪除分類
@@ -140,7 +149,7 @@ const getProductCategoryItem = catchAsync(async (req, res) => {
 
 // 建立分類
 const createProductCategory = catchAsync(async (req, res) => {
-  const { name, slug, status, sort, image } = req.body
+  const { name, slug, status, sort, image, includeInDashboard } = req.body
 
   await productCategoryModel.create({
     name,
@@ -148,6 +157,7 @@ const createProductCategory = catchAsync(async (req, res) => {
     status,
     sort,
     image,
+    includeInDashboard,
   })
 
   return getProductCategories(req, res)
@@ -155,7 +165,7 @@ const createProductCategory = catchAsync(async (req, res) => {
 
 // 更新分類
 const updateProductCategory = catchAsync(async (req, res) => {
-  const { name, slug, status, sort, image } = req.body
+  const { name, slug, status, sort, image, includeInDashboard } = req.body
 
   await productCategoryModel.findByIdAndUpdate(req.params.id, {
     name,
@@ -163,6 +173,7 @@ const updateProductCategory = catchAsync(async (req, res) => {
     status,
     sort,
     image,
+    includeInDashboard,
   })
 
   return getProductCategories(req, res)

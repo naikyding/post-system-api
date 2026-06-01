@@ -7,13 +7,12 @@ const getAllPaymentTypeTotal = (orderData) => {
 
       const formatQuantity = cur.items.reduce(
         (init, cur) => {
-          if (cur.product && cur.product.type === '塑膠提袋') init['bag'] += 1
+          if (cur.product?.category?.includeInDashboard === false) return init
           else init['item'] += cur.quantity
           return init
         },
         {
           item: 0,
-          bag: 0,
         }
       )
 
@@ -21,7 +20,6 @@ const getAllPaymentTypeTotal = (orderData) => {
         matchItem['total'] += cur.totalPrice
         matchItem['orderQuantity'] += 1
         matchItem['itemQuantity'] += formatQuantity['item']
-        matchItem['bagQuantity'] += formatQuantity['bag']
         matchItem['data'] = [
           ...matchItem['data'],
           {
@@ -39,7 +37,6 @@ const getAllPaymentTypeTotal = (orderData) => {
             total: cur.totalPrice,
             orderQuantity: 1,
             itemQuantity: formatQuantity['item'],
-            bagQuantity: formatQuantity['bag'],
             data: [
               {
                 items: cur.items,
@@ -59,7 +56,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'cash',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -67,7 +64,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'Line Pay',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -77,7 +74,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'cash',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -85,7 +82,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'Line Pay',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -95,7 +92,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'cash',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -103,7 +100,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'Line Pay',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -113,7 +110,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'cash',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -121,7 +118,7 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: 'Line Pay',
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
+
           total: 0,
           data: [],
         },
@@ -129,7 +126,6 @@ const getAllPaymentTypeTotal = (orderData) => {
           type: null,
           orderQuantity: 0,
           itemQuantity: 0,
-          bagQuantity: 0,
           total: 0,
           data: [],
         },

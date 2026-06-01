@@ -113,9 +113,14 @@ const getBaseData = async (req, res, next) => {
       path: 'items',
       populate: {
         path: 'product',
-        populate: {
-          path: 'extras',
-        },
+        populate: [
+          {
+            path: 'extras',
+          },
+          {
+            path: 'category',
+          },
+        ],
       },
     })
     .populate({
