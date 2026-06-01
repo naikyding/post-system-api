@@ -1,6 +1,8 @@
 const catchAsync = require('../utils/catchAsync')
 const productsModel = require('../models/products.model')
 const extrasModel = require('../models/extras.model')
+const productCategoriesModel = require('../models/productCategory.model')
+
 const { ObjectId } = require('mongoose').Types
 
 const { successResponse } = require('../utils/responseHandlers')
@@ -68,12 +70,7 @@ const validation = {
       .withMessage('`status` 必須為字串格式'),
 
     body('type')
-      .exists() // 欄位存在
-      .withMessage('欄位 `type` 必填')
-      .bail() // 不可為空
-      .notEmpty()
-      .withMessage('`type` 不可為空值')
-      .bail()
+      .optional()
       .isString() // 為字串格式
       .withMessage('`type` 必須為字串格式'),
 
@@ -100,6 +97,21 @@ const validation = {
       .not()
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
+
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await productCategoriesModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
 
     validateBody.extras(),
   ],
@@ -172,6 +184,20 @@ const validation = {
       .not()
       .isIn([0, '0'])
       .withMessage('`price` 不可為 0'),
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await productCategoriesModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
 
     validateBody.extras(),
   ],
@@ -276,6 +302,107 @@ const validation = {
   ],
 }
 
+const getProductsForMenu = catchAsync(async (req, res) => {
+  let formatAllProducts = []
+
+  const allProducts = await productsModel
+    .find({
+      agents: req.headers['mc-active-agent-id'],
+    })
+    .select('-createdAt -updatedAt')
+    .populate({
+      path: 'extras',
+      select: '-createdAt -updatedAt',
+      populate: {
+        path: 'category',
+        select: '-createdAt -updatedAt',
+        match: {
+          status: 'available',
+        },
+      },
+    })
+    .populate({
+      path: 'category',
+      select: '-createdAt -updatedAt',
+      match: {
+        status: 'available',
+      },
+    })
+    .sort({
+      price: 1,
+    })
+    .lean()
+
+  const formatExtrasByCategory = (extras = []) => {
+    const result = extras.reduce((acc, cur) => {
+      // category 不存在略過
+      if (!cur.category) return acc
+
+      const matchItem = acc.find(
+        (item) => item.category._id.toString() === cur.category._id.toString()
+      )
+
+      if (matchItem) {
+        matchItem.items.push(cur)
+
+        return acc
+      }
+
+      return [
+        ...acc,
+        {
+          category: cur.category,
+          items: [cur],
+        },
+      ]
+    }, [])
+
+    // category sort 排序
+    result.sort((a, b) => {
+      return (a.category.sort || 0) - (b.category.sort || 0)
+    })
+
+    return result
+  }
+
+  // product 依 category 分組
+  formatAllProducts = allProducts.reduce((acc, cur) => {
+    cur.extras = formatExtrasByCategory(cur.extras)
+
+    // category 不存在時略過
+    if (!cur.category) return acc
+
+    const matchCategoryItem = acc.find(
+      (item) => item.category._id.toString() === cur.category._id.toString()
+    )
+
+    if (matchCategoryItem) {
+      matchCategoryItem.items.push(cur)
+
+      return acc
+    }
+
+    return [
+      ...acc,
+      {
+        category: cur.category,
+        items: [cur],
+      },
+    ]
+  }, [])
+
+  // category sort 排序
+  formatAllProducts.sort((a, b) => {
+    return (a.category.sort || 0) - (b.category.sort || 0)
+  })
+
+  successResponse({
+    res,
+    data: formatAllProducts,
+  })
+})
+
+// 原本
 const getProducts = catchAsync(async (req, res) => {
   let formatAllProducts
 
@@ -285,6 +412,10 @@ const getProducts = catchAsync(async (req, res) => {
     // 依 id 填充內容
     .populate({
       path: 'extras',
+      select: '-createdAt -updatedAt',
+    })
+    .populate({
+      path: 'category',
       select: '-createdAt -updatedAt',
     })
     .sort({ price: 1 })
@@ -358,7 +489,8 @@ const getProducts = catchAsync(async (req, res) => {
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, extras, price, image, status } = req.body
+  const { name, type, description, extras, price, image, status, category } =
+    req.body
 
   const agent = req.agentId
 
@@ -371,6 +503,7 @@ const createProduct = catchAsync(async (req, res) => {
     extras,
     image,
     price,
+    category,
   })
 
   if (createItem) return getProducts(req, res)
@@ -400,7 +533,7 @@ const deleteProductExtrasItem = catchAsync(async (req, res) => {
 })
 
 const updateProduct = catchAsync(async (req, res) => {
-  const { name, type, price, extras, description, status } = req.body
+  const { name, type, price, extras, description, status, category } = req.body
 
   const resData = await productsModel.findByIdAndUpdate(req.params.id, {
     name,
@@ -409,6 +542,7 @@ const updateProduct = catchAsync(async (req, res) => {
     extras,
     description,
     status,
+    category,
   })
 
   if (resData) return getProducts(req, res)
@@ -418,6 +552,7 @@ module.exports = {
   validation,
 
   getProducts,
+  getProductsForMenu,
   createProduct,
   deleteProduct,
   updateProduct,
