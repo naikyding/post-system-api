@@ -14,10 +14,18 @@ const productsSchema = new mongoose.Schema(
       default: 'inactive',
     },
 
+    // 舊分類（過渡期保留）
     type: {
       type: String,
-      required: [true, 'type 是必填項目'],
     },
+
+    // 新分類（正式關聯）
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ProductCategory',
+      default: null,
+    },
+
     name: {
       type: String,
       required: [true, 'name 是必填項目'],
