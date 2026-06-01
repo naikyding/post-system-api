@@ -35,6 +35,12 @@ const productCategorySchema = new mongoose.Schema(
       default: 0,
     },
 
+    // 是否列入儀表板統計
+    includeInDashboard: {
+      type: Boolean,
+      default: true,
+    },
+
     // 分類圖片
     image: {
       type: String,
