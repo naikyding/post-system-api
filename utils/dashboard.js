@@ -155,7 +155,7 @@ const computedTotalProductItem = (data) => {
                 ...computedAry,
                 {
                   id: item.extraItem._id,
-                  category: item.extraItem.category.name,
+                  category: item.extraItem.category?.name,
                   name: item.extraItem.name,
                   quantity: item.quantity,
                 },
@@ -175,7 +175,7 @@ const computedTotalProductItem = (data) => {
             ...computedAry,
             {
               id: itemsItem.product._id,
-              category: itemsItem.product.category.name,
+              category: itemsItem.product.category?.name,
               name: itemsItem.product.name,
               quantity: itemsItem.quantity,
             },
