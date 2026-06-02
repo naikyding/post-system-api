@@ -157,7 +157,7 @@ const computedTotalProductItem = (data) => {
                   id: item.extraItem._id,
                   type: item.extraItem?.type,
                   category: item.extraItem.category?.name,
-                  name: item.extraItem.name,
+                  name: `${item.extraItem.name} (${item.extraItem.description})`,
                   quantity: item.quantity,
                 },
               ]
