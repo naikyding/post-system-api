@@ -45,6 +45,17 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
+
+    isSuperAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
     // Auth2
     googleId: { type: String, default: '' },
     appleId: { type: String, default: '' },

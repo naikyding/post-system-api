@@ -48,19 +48,34 @@ const validation = {
       .isLength({ min: 8 })
       .withMessage('欄位 `password` 至少 8 字元'),
 
-    body('agentRoles')
-      .isArray({ min: 1 })
-      .withMessage('至少需要指定一個與角色'),
+    body('agentRoles').custom((value, { req }) => {
+      if (req.body.isSuperAdmin) return true
+
+      if (!Array.isArray(value) || value.length === 0) {
+        throw new Error('至少需要指定一個商家與角色')
+      }
+
+      return true
+    }),
 
     body('agentRoles.*.agent')
-      .isMongoId()
-      .withMessage('商家 `agent` 必須為有效的 ObjectId')
-      .bail()
-      .custom(async (id) => {
+      .optional()
+      .custom(async (id, { req }) => {
+        if (req.body.isSuperAdmin) return true
+
+        if (!id) {
+          throw new Error('商家 agent 必填')
+        }
+
         const exists = await agentsModel.findById(id).lean()
-        if (!exists) throw new Error(`指定的商家 agent ${id} 不存在`)
+
+        if (!exists) {
+          throw new Error(`指定的商家 agent ${id} 不存在`)
+        }
+
         return true
       }),
+
     body('agentRoles.*.roles')
       .isArray({ min: 1 })
       .withMessage('角色 `roles` 至少需要 1 個'),
@@ -74,6 +89,16 @@ const validation = {
         if (!exists) throw new Error(`指定的 role ${id} 不存在`)
         return true
       }),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('無效的 status'),
+
+    body('isSuperAdmin')
+      .optional()
+      .isBoolean()
+      .withMessage('isSuperAdmin 必須為布林值'),
   ],
 
   deleteUser: [
@@ -128,8 +153,15 @@ const validation = {
     // agentRoles 可選
     body('agentRoles')
       .optional()
-      .isArray({ min: 1 })
-      .withMessage('至少需要指定一個與角色'),
+      .custom((value, { req }) => {
+        if (req.body.isSuperAdmin) return true
+
+        if (!Array.isArray(value) || value.length === 0) {
+          throw new Error('至少需要指定一個商家與角色')
+        }
+
+        return true
+      }),
 
     body('agentRoles.*.agent')
       .optional()
@@ -161,6 +193,16 @@ const validation = {
         if (!exists) throw new Error(`指定的 role ${id} 不存在`)
         return true
       }),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('無效的 status'),
+
+    body('isSuperAdmin')
+      .optional()
+      .isBoolean()
+      .withMessage('isSuperAdmin 必須為布林值'),
   ],
 
   updateUserPassword: [
@@ -185,9 +227,14 @@ const validation = {
 const getUsers = catchAsync(async (req, res) => {
   const agentId = req.headers['mc-active-agent-id']
 
-  // ?all=true -> find全部 / else 查詢符合 agentId 的使用者
+  const filter = {}
+
+  if (!req.query.all) {
+    filter['agentRoles.agent'] = agentId
+  }
+
   const users = await usersModel
-    .find(req.query.all ? {} : { 'agentRoles.agent': agentId })
+    .find(filter)
     .populate('agentRoles.agent', 'name') // 可選：帶出 agent 的 name
     .populate('agentRoles.roles', 'name') // 可選：帶出 role 的 name
     .lean()
@@ -196,18 +243,33 @@ const getUsers = catchAsync(async (req, res) => {
 })
 
 const createUser = catchAsync(async (req, res) => {
-  const { email, password, agentRoles, nickname, avatar, phone, note } =
-    req.body
-
-  // 準備要存的資料
-  const userData = {
+  const {
     email,
-    password: bcrypt.hashSync(password, 12),
+    password,
     agentRoles,
     nickname,
     avatar,
     phone,
     note,
+
+    status,
+    isSuperAdmin,
+  } = req.body
+
+  // 準備要存的資料
+  const userData = {
+    email,
+    password: bcrypt.hashSync(password, 12),
+
+    agentRoles: isSuperAdmin ? [] : agentRoles,
+
+    nickname,
+    avatar,
+    phone,
+    note,
+
+    status,
+    isSuperAdmin,
   }
 
   // 建立使用者
@@ -218,10 +280,10 @@ const createUser = catchAsync(async (req, res) => {
     successResponse({ res, data: userWithoutPassword })
   }
 })
-
 const getUserBaseInfo = catchAsync(async (req, res) => {
   const { _id } = req.user
-  const matchUser = await usersModel
+
+  let matchUser = await usersModel
     .findById(_id)
     .populate({
       path: 'agentRoles.agent',
@@ -229,16 +291,57 @@ const getUserBaseInfo = catchAsync(async (req, res) => {
     })
     .populate({
       path: 'agentRoles.roles',
-      select: 'name _id',
+      select: 'name code _id',
     })
-    .select('email roles agents nickname avatar phone note')
+    .select('email agentRoles nickname avatar phone note status isSuperAdmin')
     .lean()
 
-  successResponse({ res, data: matchUser })
+  if (!matchUser) {
+    return errorResponse({
+      res,
+      statusCode: 404,
+      message: '使用者不存在',
+    })
+  }
+
+  // 超級管理員動態產生 agentRoles
+  if (matchUser.isSuperAdmin) {
+    const [agents, superAdminRole] = await Promise.all([
+      agentsModel
+        .find({
+          status: 'active',
+        })
+        .select('name _id image')
+        .lean(),
+
+      rolesModel
+        .findOne({
+          code: 'super-admin',
+          status: true,
+        })
+        .select('name code _id')
+        .lean(),
+    ])
+
+    matchUser.agentRoles = agents.map((agent) => ({
+      agent,
+      roles: [superAdminRole],
+    }))
+  }
+
+  successResponse({
+    res,
+    data: matchUser,
+  })
 })
 
 const deleteUser = catchAsync(async (req, res) => {
   const userId = req.params.id
+
+  // 軟刪除 (正式環境建議使用軟刪除，避免資料遺失)
+  //   await usersModel.findByIdAndUpdate(userId, {
+  //   status: 'inactive',
+  // })
 
   const deletedItem = await usersModel.findByIdAndDelete(userId)
   if (!deletedItem) {
@@ -258,16 +361,24 @@ const updateUser = catchAsync(async (req, res) => {
     'email',
     'password',
     'agentRoles',
+
     'nickname',
     'avatar',
     'phone',
     'note',
+
+    'status',
+    'isSuperAdmin',
   ]
 
   for (let field of allowedFields) {
     if (req.body[field] !== undefined && req.body[field] !== '') {
       update[field] = req.body[field]
     }
+  }
+
+  if (update.isSuperAdmin === true) {
+    update.agentRoles = []
   }
 
   if (update.password) {
