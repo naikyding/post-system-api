@@ -77,6 +77,7 @@ const validation = {
       }),
 
     body('agentRoles.*.roles')
+      .optional()
       .isArray({ min: 1 })
       .withMessage('角色 `roles` 至少需要 1 個'),
 
@@ -176,10 +177,6 @@ const validation = {
 
     body('agentRoles.*.roles')
       .optional()
-      .isArray({ min: 1 })
-      .withMessage('角色 `roles` 至少需要 1 個'),
-
-    body('agentRoles.*.roles')
       .isArray({ min: 1 })
       .withMessage('角色 `roles` 至少需要 1 個'),
 
