@@ -19,6 +19,30 @@ const validation = {
         const user = await agentModel.findOne({ name: value })
         if (user) throw new Error('商家已存在')
       }),
+    body('code')
+      .exists()
+      .withMessage('欄位 `code` 必填')
+      .bail()
+      .notEmpty()
+      .withMessage('`code` 不可為空值')
+      .bail()
+      .isString()
+      .withMessage('`code` 必須為字串格式')
+      .bail()
+      .custom(async (value) => {
+        const matchItem = await agentModel.findOne({
+          code: value.toUpperCase(),
+        })
+
+        if (matchItem) {
+          throw new Error('店家代碼已存在')
+        }
+      }),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('無效的 `status`'),
   ],
 
   updateAgent: [
@@ -46,6 +70,30 @@ const validation = {
         if (agent && String(agent._id) !== req.params.id)
           throw new Error('商家已存在')
       }),
+    body('code')
+      .exists()
+      .withMessage('欄位 `code` 必填')
+      .bail()
+      .notEmpty()
+      .withMessage('`code` 不可為空值')
+      .bail()
+      .isString()
+      .withMessage('`code` 必須為字串格式')
+      .bail()
+      .custom(async (value, { req }) => {
+        const matchItem = await agentModel.findOne({
+          code: value.toUpperCase(),
+        })
+
+        if (matchItem && matchItem._id.toString() !== req.params.id) {
+          throw new Error('店家代碼已存在')
+        }
+      }),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('無效的 `status`'),
   ],
   deleteAgent: [
     param('id')
@@ -53,42 +101,78 @@ const validation = {
       .withMessage('無效的 `id`')
       .bail() // id 不存在
       .custom(async (id) => {
-        const matchItem = await agentModel.findByIdAndDelete(id)
+        const matchItem = await agentModel.findById(id)
         if (!matchItem) throw new Error('`id` 不存在')
       }),
   ],
 }
 
-const getAgents = catchAsync(async (req, res, next) => {
-  const agentsData = await agentModel.find()
-  successResponse({ res, data: agentsData })
+const getAgents = catchAsync(async (req, res) => {
+  const agentsData = await agentModel.find().sort({ createdAt: -1 })
+
+  successResponse({
+    res,
+    data: agentsData,
+  })
 })
 
-const createAgent = catchAsync(async (req, res, next) => {
-  const { name, description, image } = req.body
+const createAgent = catchAsync(async (req, res) => {
+  const { name, description, image, code, status } = req.body
 
-  const resData = await agentModel.create({ name, description, image })
+  const resData = await agentModel.create({
+    name,
+    description,
+    image,
+    code,
+    status,
 
-  successResponse({ res, statusCode: 201, data: resData })
+    createdBy: req.user?._id,
+  })
+
+  successResponse({
+    res,
+    statusCode: 201,
+    data: resData,
+  })
 })
 
 const deleteAgent = catchAsync(async (req, res, next) => {
-  const agentsData = await agentModel.find()
-  successResponse({ res, data: agentsData })
+  // await agentModel.findByIdAndUpdate(req.params.id, {
+  //   status: 'inactive',
+  // })
+  await agentModel.findByIdAndDelete(req.params.id)
+
+  return getAgents(req, res)
 })
 
-const updateAgent = catchAsync(async (req, res, next) => {
-  const { name, description, image } = req.body
-  const id = req.params.id
+const updateAgent = catchAsync(async (req, res) => {
+  const { name, description, image, code, status } = req.body
 
   const agentData = await agentModel.findByIdAndUpdate(
-    id,
-    { $set: { name, description, image } },
-    { new: true, runValidators: true }
+    req.params.id,
+    {
+      $set: {
+        name,
+        description,
+        image,
+        code,
+        status,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
   )
 
-  if (!agentData) throw new Error('找不到該資料')
-  successResponse({ res, data: agentData })
+  if (!agentData) {
+    throw new Error('找不到該資料')
+  }
+
+  successResponse({
+    res,
+    data: agentData,
+  })
 })
 
 module.exports = {

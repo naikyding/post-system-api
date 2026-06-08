@@ -9,21 +9,18 @@ const { successResponse, errorResponse } = require('../utils/responseHandlers')
 const validation = {
   getRoutes: [
     header('mc-active-agent-id')
-      .exists() // 欄位存在
-      .withMessage('header agent required')
-      .bail()
-      .isMongoId() // 是否為 mongo id
+      .optional()
+      .isMongoId()
       .withMessage('「商家」無效')
       .bail() // id 不存在
       .custom(async (id) => {
         const matchItem = await agentsModel.findById(id)
         if (!matchItem) throw new Error('「商家」不存在')
       }),
+
     header('mc-active-role-id')
-      .exists() // 欄位存在
-      .withMessage('角色 id 必須')
-      .bail()
-      .isMongoId() // 是否為 mongo id
+      .optional()
+      .isMongoId()
       .withMessage('「角色」無效')
       .bail() // id 不存在
       .custom(async (id) => {
@@ -40,7 +37,7 @@ const getRoutes = catchAsync(async (req, res) => {
 
   const data = await userModel
     .findById(userId)
-    .select('agentRoles')
+    .select('agentRoles isSuperAdmin')
     .populate({
       path: 'agentRoles.roles',
       populate: {
@@ -51,6 +48,13 @@ const getRoutes = catchAsync(async (req, res) => {
     .lean()
 
   let allMenus = []
+  if (!agentId || !roleId) {
+    return errorResponse({
+      res,
+      statusCode: 400,
+      message: '請選擇商家與角色',
+    })
+  }
 
   if (!data)
     return errorResponse({
@@ -59,9 +63,32 @@ const getRoutes = catchAsync(async (req, res) => {
       message: '角色不存在',
     })
 
+  if (data.isSuperAdmin) {
+    const superAdminRole = await rolesModel
+      .findOne({
+        code: 'super-admin',
+        status: true,
+      })
+      .populate('menus')
+      .lean()
+
+    if (!superAdminRole) {
+      return errorResponse({
+        res,
+        statusCode: 404,
+        message: '找不到超級管理員角色',
+      })
+    }
+
+    return successResponse({
+      res,
+      data: buildMenuTree(superAdminRole.menus),
+    })
+  }
+
   // 指定 agent 與 指定 role menus 處理後回傳
   data.agentRoles.forEach((item) => {
-    if (String(item.agent) === agentId) {
+    if (item.agent?.toString() === agentId) {
       item.roles.forEach((role) => {
         if (String(role._id) === roleId) {
           role.menus = buildMenuTree(role.menus)

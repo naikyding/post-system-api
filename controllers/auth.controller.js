@@ -109,9 +109,6 @@ const userLogin = async (req, res) => {
   const matchUser = await usersModel.findOne({ email })
   if (!matchUser) return errorFunc()
 
-  console.log('matchUser', matchUser)
-  console.log('password', password)
-
   const matchPassword = bcrypt.compareSync(password, matchUser.password)
   if (!matchPassword) return errorFunc()
 
