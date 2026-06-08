@@ -280,6 +280,7 @@ const createUser = catchAsync(async (req, res) => {
     successResponse({ res, data: userWithoutPassword })
   }
 })
+
 const getUserBaseInfo = catchAsync(async (req, res) => {
   const { _id } = req.user
 
