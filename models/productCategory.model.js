@@ -2,46 +2,42 @@ const mongoose = require('mongoose')
 
 const productCategorySchema = new mongoose.Schema(
   {
-    // 分類狀態
     status: {
       type: String,
-      enum: [
-        'draft', // 草稿
-        'available', // 啟用中
-        'hidden', // 隱藏
-      ],
+      enum: ['draft', 'available', 'hidden'],
       default: 'draft',
     },
 
-    // 分類名稱
     name: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // 分類代碼（英文）
     slug: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
 
-    // 排序
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: [true, 'agent 是必填項目'],
+      index: true,
+    },
+
     sort: {
       type: Number,
       default: 0,
     },
 
-    // 是否列入儀表板統計
     includeInDashboard: {
       type: Boolean,
       default: true,
     },
 
-    // 分類圖片
     image: {
       type: String,
       default: '',
@@ -50,6 +46,26 @@ const productCategorySchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
+  }
+)
+
+productCategorySchema.index(
+  {
+    agent: 1,
+    slug: 1,
+  },
+  {
+    unique: true,
+  }
+)
+
+productCategorySchema.index(
+  {
+    agent: 1,
+    name: 1,
+  },
+  {
+    unique: true,
   }
 )
 

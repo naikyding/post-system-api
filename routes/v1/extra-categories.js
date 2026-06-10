@@ -17,7 +17,7 @@ const {
 const validateHandler = require('../../utils/validateHandler')
 
 // 取得全部分類
-router.get('/', auth, getExtraCategories)
+router.get('/', auth, validation.getExtraCategories, getExtraCategories)
 
 // 取得單筆分類
 router.get(

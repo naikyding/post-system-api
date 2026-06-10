@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 
 const extrasSchema = new mongoose.Schema(
   {
+    // 舊分類（過渡期保留）
     type: {
       type: String,
     },
@@ -9,16 +10,26 @@ const extrasSchema = new mongoose.Schema(
     // 上架狀態
     status: {
       type: String,
-      enum: [
-        'active', // 上架
-        'inactive', // 下架
-        'deprecated', // 棄用
-      ],
-      // required: [true, '商品狀態是必填項目'],
+      enum: ['active', 'inactive', 'deprecated'],
       default: 'inactive',
     },
 
-    // 新分類（正式關聯）
+    // 所屬店家
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: [true, 'agent 是必填項目'],
+      index: true,
+    },
+    agents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'agents 是必填項目'],
+        ref: 'Agent',
+      },
+    ],
+
+    // 新分類
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ExtrasCategory',
@@ -28,31 +39,47 @@ const extrasSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'name 是必填項目'],
+      trim: true,
     },
+
     description: {
       type: String,
       required: [true, 'description 是必填項目'],
+      trim: true,
     },
+
     image: {
       type: String,
       default: '',
     },
+
     price: {
       type: Number,
       required: [true, 'price 是必填項目'],
+      min: 0,
     },
-    agents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Agent',
-      },
-    ],
   },
   {
     versionKey: false,
     timestamps: true,
   }
 )
+
+// 同店家不可建立同名配料
+extrasSchema.index(
+  {
+    agent: 1,
+    name: 1,
+  },
+  {
+    unique: true,
+  }
+)
+
+// 常用查詢
+extrasSchema.index({
+  agent: 1,
+  category: 1,
+})
 
 module.exports = mongoose.model('Extra', extrasSchema)

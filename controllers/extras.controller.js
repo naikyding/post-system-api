@@ -5,6 +5,7 @@ const agentModel = require('../models/agents.model')
 const { body, validationResult, param } = require('express-validator')
 const { successResponse } = require('../utils/responseHandlers')
 const { validateHeader } = require('../utils/requestValidation')
+const extrasCategoryModel = require('../models/extrasCategory.model')
 
 const validation = {
   getExtras: [validateHeader.mcActiveAgentId(false)],
@@ -31,9 +32,7 @@ const validation = {
           const user = await extrasModel.findOne({
             name: value,
             type: req.body.type,
-            agents: {
-              $in: [req.agentId],
-            },
+            agent: req.agentId,
           })
           if (user) throw new Error('廠家的配料已存在')
         }
@@ -75,11 +74,21 @@ const validation = {
       .bail()
       .isNumeric() // 為數格式 "123" 會過
       .withMessage('`price` 必須為數字格式'),
-    // 可以為 0
-    // .bail()
-    // .not()
-    // .isIn([0, '0'])
-    // .withMessage('`price` 不可為 0'),
+
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await extrasCategoryModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
   ],
 
   deleteExtra: [
@@ -124,6 +133,21 @@ const validation = {
       .isString() // 為字串格式
       .withMessage('`status` 必須為字串格式'),
 
+    body('category')
+      .optional()
+      .isMongoId()
+      .withMessage('`category` 格式錯誤')
+      .bail()
+      .custom(async (category) => {
+        const matchCategory = await extrasCategoryModel.findById(category)
+
+        if (!matchCategory) {
+          throw new Error('`category` 不存在')
+        }
+
+        return true
+      }),
+
     body('name')
       .optional()
       .notEmpty()
@@ -143,10 +167,9 @@ const validation = {
         if (errorsValidate.length < 1) {
           if (req.matchExtraItem.name === req.body.name) return true
           else {
-            console.log(req.agentId, 'req.agentId')
             const extraItem = await extrasModel.findOne({
               name: value,
-              agents: req.agentId,
+              agent: req.agentId,
             })
             if (extraItem) throw new Error('名稱已存在')
           }
@@ -178,9 +201,8 @@ const getExtras = catchAsync(async (req, res, next) => {
 
   const query = {}
 
-  // agent
   if (req.agentId) {
-    query.agents = req.agentId
+    query.agent = req.agentId
   }
 
   // status
@@ -212,7 +234,8 @@ const createExtra = catchAsync(async (req, res, next) => {
     type,
     status,
     category,
-    agents: [req.agentId],
+
+    agent: req.agentId,
   })
 
   if (extrasData) getExtras(req, res, next)

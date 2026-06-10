@@ -24,9 +24,16 @@ const extrasCategorySchema = new mongoose.Schema(
     slug: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
+    },
+
+    // 所屬店家
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: [true, 'agent 是必填項目'],
+      index: true,
     },
 
     // 排序
@@ -44,6 +51,28 @@ const extrasCategorySchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
+  }
+)
+
+// 同店家 slug 不可重覆
+extrasCategorySchema.index(
+  {
+    agent: 1,
+    slug: 1,
+  },
+  {
+    unique: true,
+  }
+)
+
+// 同店家 name 不可重覆
+extrasCategorySchema.index(
+  {
+    agent: 1,
+    name: 1,
+  },
+  {
+    unique: true,
   }
 )
 
