@@ -38,10 +38,12 @@ const productsSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
     price: {
       type: Number,
       required: [true, 'price 是必填項目'],
     },
+
     agents: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -49,6 +51,13 @@ const productsSchema = new mongoose.Schema(
         ref: 'Agent',
       },
     ],
+
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: [true, 'agent 是必填項目'],
+    },
+
     extras: {
       type: [
         {
@@ -57,6 +66,12 @@ const productsSchema = new mongoose.Schema(
         },
       ],
       default: [], // 預設為空陣列
+    },
+
+    // 是否為快速新增的商品
+    isQuickAdd: {
+      type: Boolean,
+      default: false,
     },
   },
   {

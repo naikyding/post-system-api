@@ -108,10 +108,9 @@ const validation = {
 }
 
 const getMarkersList = catchAsync(async (req) => {
-  const agentId = req.headers['mc-active-agent-id'] || req.body.agent
   const markersList = await markersModel
     .find({
-      agent: agentId,
+      agent: req.agentId,
     })
     .select('-agent -createdAt -updatedAt')
 

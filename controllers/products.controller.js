@@ -10,16 +10,12 @@ const { body, validationResult, param, header } = require('express-validator')
 const { validateHeader, validateBody } = require('../utils/requestValidation')
 
 const validation = {
-  getProduct: [
-    header('mc-active-agent-id')
-      .exists() // 欄位存在
-      .withMessage('廠商 ID 必填 (`mc-active-agent-id`)')
-      .bail()
-      .isMongoId() // 是否為 mongo id
-      .withMessage('無效的廠商 ID (`mc-active-agent-id`)'),
-  ],
+  getProduct: [validateHeader.mcActiveAgentId()],
+
+  getProductsForMenu: [validateHeader.mcActiveAgentId()],
 
   getProductItem: [
+    validateHeader.mcActiveAgentId(),
     param('productId')
       .exists() // 欄位存在
       .withMessage('欄位 `productId` 必填')
@@ -51,10 +47,9 @@ const validation = {
           const user = await productsModel.findOne({
             name: value,
             type: req.body.type,
-            agents: {
-              $in: [req.agentId],
-            },
+            agent: req.agentId,
           })
+
           if (user) throw new Error('商品已存在')
         }
       }),
@@ -103,8 +98,11 @@ const validation = {
       .isMongoId()
       .withMessage('`category` 格式錯誤')
       .bail()
-      .custom(async (category) => {
-        const matchCategory = await productCategoriesModel.findById(category)
+      .custom(async (category, { req }) => {
+        const matchCategory = await productCategoriesModel.findOne({
+          _id: category,
+          agent: req.agentId,
+        })
 
         if (!matchCategory) {
           throw new Error('`category` 不存在')
@@ -114,6 +112,11 @@ const validation = {
       }),
 
     validateBody.extras(),
+
+    body('isQuickAdd')
+      .optional()
+      .isBoolean()
+      .withMessage('`isQuickAdd` 必須為布林值'),
   ],
 
   updateProduct: [
@@ -123,7 +126,10 @@ const validation = {
       .withMessage('無效的 `id`')
       .bail() // id 不存在
       .custom(async (id, { req }) => {
-        const matchItem = await productsModel.findById(id)
+        const matchItem = await productsModel.findOne({
+          _id: id,
+          agent: req.agentId,
+        })
         if (matchItem) req.matchItem = matchItem
         else throw new Error('`id` 不存在')
       }),
@@ -148,10 +154,9 @@ const validation = {
             const user = await productsModel.findOne({
               name: value,
               type: req.body.type,
-              agents: {
-                $in: [req.agentId],
-              },
+              agent: req.agentId,
             })
+
             if (user) throw new Error('商品已存在')
           }
         }
@@ -189,8 +194,11 @@ const validation = {
       .isMongoId()
       .withMessage('`category` 格式錯誤')
       .bail()
-      .custom(async (category) => {
-        const matchCategory = await productCategoriesModel.findById(category)
+      .custom(async (category, { req }) => {
+        const matchCategory = await productCategoriesModel.findOne({
+          _id: category,
+          agent: req.agentId,
+        })
 
         if (!matchCategory) {
           throw new Error('`category` 不存在')
@@ -200,6 +208,11 @@ const validation = {
       }),
 
     validateBody.extras(),
+
+    body('isQuickAdd')
+      .optional()
+      .isBoolean()
+      .withMessage('`isQuickAdd` 必須為布林值'),
   ],
 
   deleteProduct: [
@@ -275,9 +288,15 @@ const validation = {
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `productId`')
       .bail()
-      .custom(async (productId) => {
-        const matchProduct = await productsModel.findById(productId)
-        if (!matchProduct) throw new Error('productId Error: 產品不存在 ')
+      .custom(async (productId, { req }) => {
+        const matchItem = await productsModel.findOne({
+          _id: productId,
+          agent: req.agentId,
+        })
+
+        if (!matchItem) {
+          throw new Error('`id` 不存在')
+        }
       }),
     param('extrasId')
       .exists() // 欄位存在
@@ -307,7 +326,7 @@ const getProductsForMenu = catchAsync(async (req, res) => {
 
   const allProducts = await productsModel
     .find({
-      agents: req.headers['mc-active-agent-id'],
+      agent: req.agentId,
     })
     .select('-createdAt -updatedAt')
     .populate({
@@ -407,12 +426,18 @@ const getProducts = catchAsync(async (req, res) => {
   let formatAllProducts
 
   const allProducts = await productsModel
-    .find({ agents: req.headers['mc-active-agent-id'] })
+    .find({
+      agent: req.agentId,
+    })
     .select('-createdAt -updatedAt ') // 不顯示項目
     // 依 id 填充內容
     .populate({
       path: 'extras',
       select: '-createdAt -updatedAt',
+      populate: {
+        path: 'category',
+        select: 'name',
+      },
     })
     .populate({
       path: 'category',
@@ -422,88 +447,104 @@ const getProducts = catchAsync(async (req, res) => {
     .lean() // 資訊不在擁有 mongoose 嵌入操作，為一般 js 物件
   // const cloneProduct = JSON.parse(JSON.stringify(allProducts))
 
-  if (allProducts.length > 0) {
-    formatAllProducts = allProducts.reduce((acc, cur) => {
-      // product.extras type 相同整合
-      const formatExtras = cur.extras.reduce((extraAcc, extraCur) => {
+  const getProductGroupName = (product) =>
+    product.category?.name || product.type || '未分類'
+
+  const getExtraGroupName = (extra) =>
+    extra.category?.name || extra.type || '未分類'
+
+  formatAllProducts = allProducts.reduce((acc, cur) => {
+    let formatExtras = []
+
+    if (cur.extras?.length > 0) {
+      formatExtras = cur.extras.reduce((extraAcc, extraCur) => {
+        const extraGroupName = getExtraGroupName(extraCur)
+
         const matchExtraAccTypeItem = extraAcc.find(
-          (accItem) => accItem.type === extraCur.type
+          (accItem) => accItem.type === extraGroupName
         )
 
         if (matchExtraAccTypeItem) {
           matchExtraAccTypeItem.items.push(extraCur)
-
           return extraAcc
         }
 
-        if (extraCur.type === '加購') {
-          return (extraAcc = [
-            { type: extraCur.type, items: [extraCur] },
+        if (extraGroupName === '加購') {
+          return [
+            {
+              type: extraGroupName,
+              items: [extraCur],
+            },
             ...extraAcc,
-          ])
+          ]
         }
 
-        return (extraAcc = [
+        return [
           ...extraAcc,
-          { type: extraCur.type, items: [extraCur] },
-        ])
+          {
+            type: extraGroupName,
+            items: [extraCur],
+          },
+        ]
       }, [])
 
-      if (formatExtras.length > 0) formatExtras.push(formatExtras.shift())
-
-      cur.extras = formatExtras
-
-      // product  type 相同整合
-      const matchTypeItem = acc.find((item) => item.type === cur.type)
-      if (matchTypeItem) {
-        matchTypeItem.items.push(cur)
-        return acc
+      // 加購排最後
+      if (formatExtras.length > 0) {
+        formatExtras.push(formatExtras.shift())
       }
-
-      return (acc = [
-        ...acc,
-        {
-          type: cur.type,
-          items: [cur],
-        },
-      ])
-    }, [])
-  }
-
-  if (formatAllProducts) {
-    let other = formatAllProducts.find((item) => item.type === '其它')
-
-    formatAllProducts = [
-      ...formatAllProducts.filter(
-        (item) => item.type !== '塑膠提袋' && item.type !== '其它'
-      ),
-      formatAllProducts.find((item) => item.type === '塑膠提袋'),
-    ]
-    if (other) {
-      formatAllProducts = [...formatAllProducts, other]
     }
-  }
+
+    cur.extras = formatExtras
+
+    const productGroupName = getProductGroupName(cur)
+
+    const matchTypeItem = acc.find((item) => item.type === productGroupName)
+
+    if (matchTypeItem) {
+      matchTypeItem.items.push(cur)
+      return acc
+    }
+
+    return [
+      ...acc,
+      {
+        type: productGroupName,
+        items: [cur],
+      },
+    ]
+  }, [])
 
   // res.setHeader('Cache-Control', 'public, max-age=3600') // 快取 1 小時
   successResponse({ res, data: formatAllProducts || allProducts })
 })
 
 const createProduct = catchAsync(async (req, res) => {
-  const { name, type, description, extras, price, image, status, category } =
-    req.body
+  const {
+    name,
+    type,
+    description,
+    extras,
+    price,
+    image,
+    status,
+    category,
+    isQuickAdd,
+  } = req.body
 
   const agent = req.agentId
-
   const createItem = await productsModel.create({
     status,
     type,
     name,
     description,
-    agents: [agent],
+
     extras,
     image,
     price,
     category,
+    agent,
+
+    isQuickAdd,
   })
 
   if (createItem) return getProducts(req, res)
@@ -511,7 +552,14 @@ const createProduct = catchAsync(async (req, res) => {
   // successResponse({ res, data: createItem })
 })
 
-const deleteProduct = getProducts
+const deleteProduct = catchAsync(async (req, res) => {
+  await productsModel.findOneAndDelete({
+    _id: req.params.id,
+    agent: req.agentId,
+  })
+
+  return getProducts(req, res)
+})
 
 const getProductItem = async (productId) => {
   const productItem = await productsModel.findById(productId)
@@ -533,7 +581,16 @@ const deleteProductExtrasItem = catchAsync(async (req, res) => {
 })
 
 const updateProduct = catchAsync(async (req, res) => {
-  const { name, type, price, extras, description, status, category } = req.body
+  const {
+    name,
+    type,
+    price,
+    extras,
+    description,
+    status,
+    category,
+    isQuickAdd,
+  } = req.body
 
   const resData = await productsModel.findByIdAndUpdate(req.params.id, {
     name,
@@ -543,6 +600,7 @@ const updateProduct = catchAsync(async (req, res) => {
     description,
     status,
     category,
+    isQuickAdd,
   })
 
   if (resData) return getProducts(req, res)

@@ -39,6 +39,13 @@ const agentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+
+    // 複製來源店家（建立分店時使用）
+    parentAgent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      default: null,
+    },
   },
   {
     versionKey: false,

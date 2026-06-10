@@ -2,13 +2,18 @@ const catchAsync = require('../utils/catchAsync')
 const extrasCategoryModel = require('../models/extrasCategory.model')
 const { successResponse } = require('../utils/responseHandlers')
 const { body, param } = require('express-validator')
+const { validateHeader } = require('../utils/requestValidation')
 
 const validation = {
+  getExtraCategories: [validateHeader.mcActiveAgentId(false)],
+
   // 取得單筆
   getExtraCategoryItem: [param('id').isMongoId().withMessage('無效的 `id`')],
 
   // 建立分類
   createExtraCategory: [
+    validateHeader.mcActiveAgentId(),
+
     body('name')
       .exists()
       .withMessage('欄位 `name` 必填')
@@ -17,7 +22,17 @@ const validation = {
       .withMessage('`name` 不可為空值')
       .bail()
       .isString()
-      .withMessage('`name` 必須為字串格式'),
+      .withMessage('`name` 必須為字串格式')
+      .custom(async (value, { req }) => {
+        const matchItem = await extrasCategoryModel.findOne({
+          name: value,
+          agent: req.agentId,
+        })
+
+        if (matchItem) {
+          throw new Error('分類名稱已存在')
+        }
+      }),
 
     body('slug')
       .exists()
@@ -29,9 +44,10 @@ const validation = {
       .isString()
       .withMessage('`slug` 必須為字串格式')
       .bail()
-      .custom(async (value) => {
+      .custom(async (value, { req }) => {
         const matchItem = await extrasCategoryModel.findOne({
           slug: value,
+          agent: req.agentId,
         })
 
         if (matchItem) {
@@ -49,6 +65,8 @@ const validation = {
 
   // 更新分類
   updateExtraCategory: [
+    validateHeader.mcActiveAgentId(),
+
     param('id')
       .isMongoId()
       .withMessage('無效的 `id`')
@@ -69,7 +87,19 @@ const validation = {
       .withMessage('`name` 不可為空值')
       .bail()
       .isString()
-      .withMessage('`name` 必須為字串格式'),
+      .withMessage('`name` 必須為字串格式')
+      .custom(async (value, { req }) => {
+        if (req.matchItem.name === value) return true
+
+        const matchItem = await extrasCategoryModel.findOne({
+          name: value,
+          agent: req.agentId,
+        })
+
+        if (matchItem) {
+          throw new Error('分類名稱已存在')
+        }
+      }),
 
     body('slug')
       .optional()
@@ -84,6 +114,7 @@ const validation = {
 
         const matchItem = await extrasCategoryModel.findOne({
           slug: value,
+          agent: req.agentId,
         })
 
         if (matchItem) {
@@ -101,6 +132,8 @@ const validation = {
 
   // 刪除分類
   deleteExtraCategory: [
+    validateHeader.mcActiveAgentId(),
+
     param('id')
       .isMongoId()
       .withMessage('無效的 `id`')
@@ -115,10 +148,16 @@ const validation = {
   ],
 }
 
-// 取得全部分類
+// 依agent 取得分類
 const getExtraCategories = catchAsync(async (req, res) => {
+  const query = {}
+
+  if (req.agentId) {
+    query.agent = req.agentId
+  }
+
   const categories = await extrasCategoryModel
-    .find()
+    .find(query)
     .sort({ sort: 1, createdAt: 1 })
     .lean()
 
@@ -130,7 +169,10 @@ const getExtraCategories = catchAsync(async (req, res) => {
 
 // 取得單筆分類
 const getExtraCategoryItem = catchAsync(async (req, res) => {
-  const item = await extrasCategoryModel.findById(req.params.id)
+  const item = await extrasCategoryModel.findOne({
+    _id: req.params.id,
+    agent: req.agentId,
+  })
 
   successResponse({
     res,
@@ -148,6 +190,8 @@ const createExtraCategory = catchAsync(async (req, res) => {
     status,
     sort,
     image,
+
+    agent: req.agentId,
   })
 
   return getExtraCategories(req, res)
@@ -157,20 +201,29 @@ const createExtraCategory = catchAsync(async (req, res) => {
 const updateExtraCategory = catchAsync(async (req, res) => {
   const { name, slug, status, sort, image } = req.body
 
-  await extrasCategoryModel.findByIdAndUpdate(req.params.id, {
-    name,
-    slug,
-    status,
-    sort,
-    image,
-  })
+  await extrasCategoryModel.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      agent: req.agentId,
+    },
+    {
+      name,
+      slug,
+      status,
+      sort,
+      image,
+    }
+  )
 
   return getExtraCategories(req, res)
 })
 
 // 刪除分類
 const deleteExtraCategory = catchAsync(async (req, res) => {
-  await extrasCategoryModel.findByIdAndDelete(req.params.id)
+  await extrasCategoryModel.findOneAndDelete({
+    _id: req.params.id,
+    agent: req.agentId,
+  })
 
   return getExtraCategories(req, res)
 })
