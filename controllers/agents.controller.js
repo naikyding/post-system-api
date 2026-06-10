@@ -43,6 +43,19 @@ const validation = {
       .optional()
       .isIn(['active', 'inactive'])
       .withMessage('無效的 `status`'),
+
+    body('parentAgent')
+      .optional({ nullable: true })
+      .isMongoId()
+      .withMessage('無效的 `cloneFromAgent`')
+      .bail()
+      .custom(async (id) => {
+        const matchItem = await agentModel.findById(id)
+
+        if (!matchItem) {
+          throw new Error('來源店家不存在')
+        }
+      }),
   ],
 
   updateAgent: [
@@ -94,6 +107,23 @@ const validation = {
       .optional()
       .isIn(['active', 'inactive'])
       .withMessage('無效的 `status`'),
+
+    body('parentAgent')
+      .optional({ nullable: true })
+      .isMongoId()
+      .withMessage('無效的 `parentAgent`')
+      .bail()
+      .custom(async (id, { req }) => {
+        if (id === req.params.id) {
+          throw new Error('來源店家不可為自己')
+        }
+
+        const matchItem = await agentModel.findById(id)
+
+        if (!matchItem) {
+          throw new Error('來源店家不存在')
+        }
+      }),
   ],
   deleteAgent: [
     param('id')
@@ -108,7 +138,10 @@ const validation = {
 }
 
 const getAgents = catchAsync(async (req, res) => {
-  const agentsData = await agentModel.find().sort({ createdAt: -1 })
+  const agentsData = await agentModel
+    .find()
+    .populate('parentAgent', 'name')
+    .sort({ createdAt: -1 })
 
   successResponse({
     res,
@@ -117,7 +150,7 @@ const getAgents = catchAsync(async (req, res) => {
 })
 
 const createAgent = catchAsync(async (req, res) => {
-  const { name, description, image, code, status } = req.body
+  const { name, description, image, code, status, parentAgent } = req.body
 
   const resData = await agentModel.create({
     name,
@@ -125,6 +158,7 @@ const createAgent = catchAsync(async (req, res) => {
     image,
     code,
     status,
+    parentAgent,
 
     createdBy: req.user?._id,
   })
@@ -146,7 +180,7 @@ const deleteAgent = catchAsync(async (req, res, next) => {
 })
 
 const updateAgent = catchAsync(async (req, res) => {
-  const { name, description, image, code, status } = req.body
+  const { name, description, image, code, status, parentAgent } = req.body
 
   const agentData = await agentModel.findByIdAndUpdate(
     req.params.id,
@@ -157,6 +191,7 @@ const updateAgent = catchAsync(async (req, res) => {
         image,
         code,
         status,
+        parentAgent,
       },
     },
     {
