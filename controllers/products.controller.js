@@ -121,6 +121,7 @@ const validation = {
 
   updateProduct: [
     validateHeader.mcActiveAgentId(),
+
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
