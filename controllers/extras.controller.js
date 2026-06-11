@@ -104,6 +104,7 @@ const validation = {
   ],
 
   updateExtra: [
+    validateHeader.mcActiveAgentId(),
     param('id')
       .isMongoId() // 是否為 mongo id
       .withMessage('無效的 `id`')
@@ -114,8 +115,6 @@ const validation = {
         if (!matchExtraItem) throw new Error('`id` 不存在')
         req.matchExtraItem = matchExtraItem
       }),
-
-    validateHeader.mcActiveAgentId(),
 
     body('type')
       .optional()

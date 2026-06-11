@@ -51,11 +51,7 @@ const extras = () => {
 
       // agent 不存在的配料
       const invalidExtrasItem = matchItems.find(
-        (extras) =>
-          !extras.agents.some(
-            (agentId) =>
-              String(agentId) === String(req.headers['mc-active-agent-id'])
-          )
+        (extras) => String(req.agentId) !== String(extras.agent)
       )
 
       if (invalidExtrasItem) throw new Error('商家中不存在的配料!')
