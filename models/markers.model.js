@@ -17,10 +17,27 @@ const markersSchema = new mongoose.Schema(
       required: [true, 'agent 是必填項目'],
       ref: 'Agent',
     },
+
+    // 排序
+    sort: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     versionKey: false,
     timestamps: true,
+  }
+)
+
+markersSchema.index(
+  {
+    agent: 1,
+    name: 1,
+  },
+  {
+    unique: true,
   }
 )
 
