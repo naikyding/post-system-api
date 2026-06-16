@@ -36,6 +36,11 @@ const validation = {
           if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
         }
       }),
+
+    body('sort')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('「排序」必須為 0 以上整數'),
   ],
 
   deleteMarker: [
@@ -104,6 +109,11 @@ const validation = {
 
         if (matchMarkerItem) throw new Error(`「${marker}」已存在!`)
       }),
+
+    body('sort')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('「排序」必須為 0 以上整數'),
   ],
 }
 
@@ -113,6 +123,10 @@ const getMarkersList = catchAsync(async (req) => {
       agent: req.agentId,
     })
     .select('-agent -createdAt -updatedAt')
+    .sort({
+      sort: 1,
+      createdAt: 1,
+    })
 
   return markersList
 })
@@ -127,12 +141,14 @@ const getMarkers = catchAsync(async (req, res) => {
 })
 
 const createMarker = catchAsync(async (req, res) => {
-  const { name, description } = req.body
+  const { name, description, sort = 0 } = req.body
   const agentId = req.agentId
+
   await markersModel.create({
     name,
     agent: agentId,
     description,
+    sort,
   })
 
   const markersList = await getMarkersList(req)
@@ -156,12 +172,15 @@ const deleteMarker = catchAsync(async (req, res) => {
 
 const patchMarker = catchAsync(async (req, res) => {
   const markId = req.params.id
-  const { name, description } = req.body
+  const { name, description, sort } = req.body
 
-  await markersModel.findByIdAndUpdate(markId, {
-    name,
-    description,
-  })
+  const updateData = {}
+
+  if (name !== undefined) updateData.name = name
+  if (description !== undefined) updateData.description = description
+  if (sort !== undefined) updateData.sort = sort
+
+  await markersModel.findByIdAndUpdate(markId, updateData)
 
   const markersList = await getMarkersList(req)
 

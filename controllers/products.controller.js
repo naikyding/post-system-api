@@ -448,72 +448,64 @@ const getProducts = catchAsync(async (req, res) => {
     .lean() // 資訊不在擁有 mongoose 嵌入操作，為一般 js 物件
   // const cloneProduct = JSON.parse(JSON.stringify(allProducts))
 
-  const getProductGroupName = (product) =>
-    product.category?.name || product.type || '未分類'
-
-  const getExtraGroupName = (extra) =>
-    extra.category?.name || extra.type || '未分類'
-
   formatAllProducts = allProducts.reduce((acc, cur) => {
-    let formatExtras = []
+    // extras 依 category 分組
+    cur.extras = cur.extras.reduce((extraAcc, extraCur) => {
+      if (!extraCur.category) return extraAcc
 
-    if (cur.extras?.length > 0) {
-      formatExtras = cur.extras.reduce((extraAcc, extraCur) => {
-        const extraGroupName = getExtraGroupName(extraCur)
+      const matchExtraCategory = extraAcc.find(
+        (item) =>
+          item.category._id.toString() === extraCur.category._id.toString()
+      )
 
-        const matchExtraAccTypeItem = extraAcc.find(
-          (accItem) => accItem.type === extraGroupName
-        )
+      if (matchExtraCategory) {
+        matchExtraCategory.items.push(extraCur)
 
-        if (matchExtraAccTypeItem) {
-          matchExtraAccTypeItem.items.push(extraCur)
-          return extraAcc
-        }
-
-        if (extraGroupName === '加購') {
-          return [
-            {
-              type: extraGroupName,
-              items: [extraCur],
-            },
-            ...extraAcc,
-          ]
-        }
-
-        return [
-          ...extraAcc,
-          {
-            type: extraGroupName,
-            items: [extraCur],
-          },
-        ]
-      }, [])
-
-      // 加購排最後
-      if (formatExtras.length > 0) {
-        formatExtras.push(formatExtras.shift())
+        return extraAcc
       }
-    }
 
-    cur.extras = formatExtras
+      return [
+        ...extraAcc,
+        {
+          category: extraCur.category,
+          items: [extraCur],
+        },
+      ]
+    }, [])
 
-    const productGroupName = getProductGroupName(cur)
+    // product 依 category 分組
+    if (!cur.category) return acc
 
-    const matchTypeItem = acc.find((item) => item.type === productGroupName)
+    const matchCategory = acc.find(
+      (item) => item.category._id.toString() === cur.category._id.toString()
+    )
 
-    if (matchTypeItem) {
-      matchTypeItem.items.push(cur)
+    if (matchCategory) {
+      matchCategory.items.push(cur)
+
       return acc
     }
 
     return [
       ...acc,
       {
-        type: productGroupName,
+        category: cur.category,
         items: [cur],
       },
     ]
   }, [])
+
+  // extra category 排序
+  formatAllProducts.forEach((group) => {
+    group.extras?.sort((a, b) => {
+      return (a.category?.sort || 0) - (b.category?.sort || 0)
+    })
+  })
+
+  // product category 排序
+  formatAllProducts.sort((a, b) => {
+    return (a.category?.sort || 0) - (b.category?.sort || 0)
+  })
 
   // res.setHeader('Cache-Control', 'public, max-age=3600') // 快取 1 小時
   successResponse({ res, data: formatAllProducts || allProducts })
