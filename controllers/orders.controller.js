@@ -799,9 +799,14 @@ const getOrderList = catchAsync(async (req, res) => {
       populate: [
         {
           path: 'product',
-          populate: {
-            path: 'extras',
-          },
+          populate: [
+            {
+              path: 'extras',
+            },
+            {
+              path: 'category',
+            },
+          ],
         },
         {
           path: 'extras',
