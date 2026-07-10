@@ -122,6 +122,12 @@ const ordersSchema = mongoose.Schema(
     scheduledAt: {
       type: Date,
     },
+
+    source: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'OrderSource',
+      default: null,
+    },
   },
   {
     versionKey: false,
