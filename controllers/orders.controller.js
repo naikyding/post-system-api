@@ -287,6 +287,25 @@ const validation = {
 
         return true
       }),
+
+    body('source')
+      .optional()
+      .isMongoId()
+      .withMessage('無效的 `source id`')
+      .bail()
+      .custom(async (id, { req }) => {
+        const orderSourcesModel = require('../models/orderSources.model')
+
+        const matchSource = await orderSourcesModel.findOne({
+          _id: id,
+          agent: req.agentId,
+          status: 'active',
+        })
+
+        if (!matchSource) {
+          throw new Error('`source` 不存在')
+        }
+      }),
   ],
 
   createOrderItem: [],
@@ -474,6 +493,25 @@ const validation = {
           throw new Error('`status` 格式錯誤')
 
         return true
+      }),
+
+    body('source')
+      .optional()
+      .isMongoId()
+      .withMessage('無效的 `source id`')
+      .bail()
+      .custom(async (id, { req }) => {
+        const orderSourcesModel = require('../models/orderSources.model')
+
+        const matchSource = await orderSourcesModel.findOne({
+          _id: id,
+          agent: req.agentId,
+          status: 'active',
+        })
+
+        if (!matchSource) {
+          throw new Error('`source` 不存在')
+        }
       }),
 
     // 驗證數字
@@ -680,6 +718,7 @@ const validation = {
         // 更新資料
         const {
           status,
+          source,
           isPaid,
           paymentType,
           mobileNoThreeDigits,
@@ -692,7 +731,8 @@ const validation = {
         const matchOrder = await ordersModel.findOneAndUpdate(
           { _id: id, agent: req.agentId },
           {
-            status, // 更新訂單狀態
+            status,
+            source,
             isPaid,
             paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
             mobileNoThreeDigits,
@@ -795,6 +835,10 @@ const getOrderList = catchAsync(async (req, res) => {
 
   let orderList = await getOrderListQuery
     .populate({
+      path: 'source',
+      select: 'name',
+    })
+    .populate({
       path: 'items',
       populate: [
         {
@@ -858,9 +902,11 @@ const getOrderList = catchAsync(async (req, res) => {
 
 const createOrder = catchAsync(async (req, res) => {
   const agent = req.agentId
+
   const {
     customer,
     operator,
+    source,
     totalPrice,
     note,
     isPaid,
@@ -937,6 +983,7 @@ const createOrder = catchAsync(async (req, res) => {
   const createdOrder = await ordersModel.create({
     customer,
     operator,
+    source,
     totalPrice,
     agent,
     mobileNoThreeDigits,

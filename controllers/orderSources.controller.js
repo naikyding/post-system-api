@@ -40,6 +40,16 @@ const validation = {
       .optional()
       .isInt({ min: 0 })
       .withMessage('「排序」必須為 0 以上整數'),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('「狀態」無效'),
+
+    body('isDefault')
+      .optional()
+      .isBoolean()
+      .withMessage('「預設來源」必須為布林值'),
   ],
 
   updateOrderSource: [
@@ -80,6 +90,16 @@ const validation = {
       .optional()
       .isInt({ min: 0 })
       .withMessage('「排序」必須為 0 以上整數'),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive'])
+      .withMessage('「狀態」無效'),
+
+    body('isDefault')
+      .optional()
+      .isBoolean()
+      .withMessage('「預設來源」必須為布林值'),
   ],
 
   deleteOrderSource: [
@@ -117,13 +137,22 @@ const getOrderSources = catchAsync(async (req, res) => {
 })
 
 const createOrderSource = catchAsync(async (req, res) => {
-  const { name, sort = 0, status } = req.body
+  const { name, sort = 0, status = 'active', isDefault = false } = req.body
+
+  // 若設為預設，取消其它預設
+  if (isDefault) {
+    await orderSourcesModel.updateMany(
+      { agent: req.agentId },
+      { isDefault: false }
+    )
+  }
 
   await orderSourcesModel.create({
     agent: req.agentId,
     name,
     sort,
     status,
+    isDefault,
   })
 
   successResponse({
@@ -133,15 +162,27 @@ const createOrderSource = catchAsync(async (req, res) => {
 })
 
 const updateOrderSource = catchAsync(async (req, res) => {
-  const { name, sort, status } = req.body
+  const { name, sort, status, isDefault } = req.body
 
   const updateData = {}
 
   if (name !== undefined) updateData.name = name
-
   if (sort !== undefined) updateData.sort = sort
-
   if (status !== undefined) updateData.status = status
+  if (isDefault !== undefined) updateData.isDefault = isDefault
+
+  // 若設為預設，取消其它預設
+  if (isDefault === true) {
+    await orderSourcesModel.updateMany(
+      {
+        agent: req.agentId,
+        _id: { $ne: req.params.id },
+      },
+      {
+        isDefault: false,
+      }
+    )
+  }
 
   await orderSourcesModel.findByIdAndUpdate(req.params.id, updateData)
 

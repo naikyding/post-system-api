@@ -25,20 +25,27 @@ const orderSourceSchema = new mongoose.Schema(
       enum: ['active', 'inactive'],
       default: 'active',
     },
+
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
     versionKey: false,
   }
 )
-
 orderSourceSchema.index(
   {
     agent: 1,
-    name: 1,
+    isDefault: 1,
   },
   {
     unique: true,
+    partialFilterExpression: {
+      isDefault: true,
+    },
   }
 )
 
