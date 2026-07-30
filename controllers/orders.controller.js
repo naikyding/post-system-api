@@ -41,10 +41,10 @@ const validation = {
       .optional()
       .isNumeric() // 為數格式 "123" 會過
       .withMessage('query `offset` 必須為數字格式'),
-    query('paid')
+    query('isPaid')
       .optional()
       .isBoolean()
-      .withMessage('query `paid` 應為布林格式'),
+      .withMessage('query `isPaid` 應為布林格式'),
     query('from')
       .optional()
       .isISO8601()
@@ -826,7 +826,7 @@ const validation = {
 }
 
 const getOrderList = catchAsync(async (req, res) => {
-  const { status, paid: isPaid, from, to, agent, paymentType } = req.query
+  const { status, isPaid, from, to, agent, paymentType } = req.query
 
   let filterContent = {}
   const returnAtQuery = (filterContent, from, to) => ({
