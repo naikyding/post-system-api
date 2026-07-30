@@ -42,10 +42,10 @@ const validation = {
       .optional()
       .isNumeric() // 為數格式 "123" 會過
       .withMessage('query `offset` 必須為數字格式'),
-    query('paid')
+    query('isPaid')
       .optional()
       .isBoolean()
-      .withMessage('query `paid` 應為布林格式'),
+      .withMessage('query `isPaid` 應為布林格式'),
     query('from')
       .optional()
       .isISO8601()
@@ -67,8 +67,7 @@ const getBaseData = async (req, res, next) => {
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid === 'true' ? true : false
   if (agentId) filterContent['agent'] = agentId
-  if (payType !== 'all')
-    filterContent['paymentType'] = payType === 'linepay' ? 'Line Pay' : payType
+  if (payType !== 'all') filterContent['paymentType'] = payType
 
   const dynamicAt = (originFilterContent, from, to) => ({
     ...originFilterContent,
@@ -138,6 +137,10 @@ const getBaseData = async (req, res, next) => {
           },
         ],
       },
+    })
+    .populate({
+      path: 'paymentType',
+      select: 'name code color',
     })
     .lean()
 
