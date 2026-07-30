@@ -9,6 +9,7 @@ const {
 } = require('express-validator')
 
 const agentsModel = require('../models/agents.model')
+const paymentTypesModel = require('../models/paymentType.model')
 const customersModel = require('../models/customers.model')
 const productsModel = require('../models/products.model')
 const extrasModel = require('../models/extras.model')
@@ -306,6 +307,25 @@ const validation = {
           throw new Error('`source` 不存在')
         }
       }),
+
+    body('paymentType')
+      .optional({ nullable: true })
+      .isMongoId()
+      .withMessage('無效的支付方式 `paymentType id`')
+      .bail()
+      .custom(async (id, { req }) => {
+        const matchPaymentType = await paymentTypesModel.findOne({
+          _id: id,
+          agent: req.agentId,
+          status: 'active',
+        })
+
+        if (!matchPaymentType) {
+          throw new Error('`paymentType` 不存在')
+        }
+
+        return true
+      }),
   ],
 
   createOrderItem: [],
@@ -512,6 +532,25 @@ const validation = {
         if (!matchSource) {
           throw new Error('`source` 不存在')
         }
+      }),
+
+    body('paymentType')
+      .optional({ nullable: true })
+      .isMongoId()
+      .withMessage('無效的 `paymentType id`')
+      .bail()
+      .custom(async (id, { req }) => {
+        const matchPaymentType = await paymentTypesModel.findOne({
+          _id: id,
+          agent: req.agentId,
+          status: 'active',
+        })
+
+        if (!matchPaymentType) {
+          throw new Error('`paymentType` 不存在')
+        }
+
+        return true
       }),
 
     // 驗證數字
@@ -728,20 +767,33 @@ const validation = {
           scheduledAt,
         } = req.body
 
-        const matchOrder = await ordersModel.findOneAndUpdate(
-          { _id: id, agent: req.agentId },
-          {
-            status,
-            source,
-            isPaid,
-            paymentType: paymentType === 'linePay' ? 'Line Pay' : paymentType,
-            mobileNoThreeDigits,
-            note,
-            totalPrice,
-            items,
-            scheduledAt,
-          }
-        )
+        const updateData = {}
+
+        if (status !== undefined) updateData.status = status
+        if (source !== undefined) updateData.source = source
+        if (isPaid !== undefined) updateData.isPaid = isPaid
+        if (paymentType !== undefined) updateData.paymentType = paymentType
+        if (mobileNoThreeDigits !== undefined)
+          updateData.mobileNoThreeDigits = mobileNoThreeDigits
+        if (note !== undefined) updateData.note = note
+        if (totalPrice !== undefined) updateData.totalPrice = totalPrice
+        if (items !== undefined) updateData.items = items
+        if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt
+
+        const matchOrder = await ordersModel
+          .findOneAndUpdate(
+            {
+              _id: id,
+              agent: req.agentId,
+            },
+            updateData,
+            {
+              new: true,
+              runValidators: true,
+            }
+          )
+          .populate('source', 'name')
+          .populate('paymentType', 'name code color')
 
         if (!matchOrder) throw new Error('資料不存在')
       }),
@@ -795,9 +847,9 @@ const getOrderList = catchAsync(async (req, res) => {
   if (status) filterContent['status'] = status
   if (isPaid) filterContent['isPaid'] = isPaid
   if (agent) filterContent['agent'] = agent
-  if (paymentType)
-    filterContent['paymentType'] =
-      paymentType === 'linePay' ? 'Line Pay' : paymentType
+  if (paymentType) {
+    filterContent.paymentType = paymentType
+  }
 
   if (from && to) {
     console.log(from, to)
@@ -837,6 +889,10 @@ const getOrderList = catchAsync(async (req, res) => {
     .populate({
       path: 'source',
       select: 'name',
+    })
+    .populate({
+      path: 'paymentType',
+      select: 'name code color',
     })
     .populate({
       path: 'items',
@@ -1000,6 +1056,16 @@ const createOrder = catchAsync(async (req, res) => {
     path: 'items.extras.extraItem',
     model: extrasModel,
     select: '-agents -createAt -createdAt -updatedAt',
+  })
+
+  await ordersModel.populate(createdOrder, {
+    path: 'paymentType',
+    select: 'name code color',
+  })
+
+  await ordersModel.populate(createdOrder, {
+    path: 'source',
+    select: 'name',
   })
 
   successResponse({ res, statusCode: 201, data: createdOrder })

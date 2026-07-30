@@ -19,6 +19,7 @@ const ttsRouter = require('./tts')
 const productCategoriesRouter = require('./product-categories')
 const extraCategoriesRouter = require('./extra-categories')
 const orderSourcesRouter = require('./order-sources')
+const paymentTypeRouter = require('./payment-type')
 
 router.use('/', indexRouter)
 router.use('/orders', orderRouter)
@@ -38,5 +39,6 @@ router.use('/tts', ttsRouter)
 router.use('/product-categories', productCategoriesRouter)
 router.use('/extra-categories', extraCategoriesRouter)
 router.use('/order-sources', orderSourcesRouter)
+router.use('/payment-types', paymentTypeRouter)
 
 module.exports = router
