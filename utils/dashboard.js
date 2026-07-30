@@ -1,14 +1,13 @@
 const getAllPaymentTypeTotal = (orderData) => {
   const formatData = orderData.reduce(
     (init, cur) => {
-      const matchItem = init[cur.status].find(
-        (item) => item.type === cur.paymentType
-      )
+      const paymentCode = cur.paymentType?.code ?? 'unknown'
 
       const formatQuantity = cur.items.reduce(
         (init, cur) => {
           if (cur.product?.category?.includeInDashboard === false) return init
-          else init['item'] += cur.quantity
+
+          init.item += cur.quantity
           return init
         },
         {
@@ -16,120 +15,46 @@ const getAllPaymentTypeTotal = (orderData) => {
         }
       )
 
+      const matchItem = init[cur.status].find(
+        (item) => item.type === paymentCode
+      )
+
       if (matchItem) {
-        matchItem['total'] += cur.totalPrice
-        matchItem['orderQuantity'] += 1
-        matchItem['itemQuantity'] += formatQuantity['item']
-        matchItem['data'] = [
-          ...matchItem['data'],
-          {
-            items: cur.items,
-            createdAt: cur.createdAt,
-            total: cur.totalPrice,
-            mobile: cur.mobileNoThreeDigits,
-          },
-        ]
+        matchItem.total += cur.totalPrice
+        matchItem.orderQuantity += 1
+        matchItem.itemQuantity += formatQuantity.item
+        matchItem.data.push({
+          items: cur.items,
+          createdAt: cur.createdAt,
+          total: cur.totalPrice,
+          mobile: cur.mobileNoThreeDigits,
+        })
       } else {
-        init[cur.status] = [
-          ...init[cur.status],
-          {
-            type: cur.paymentType,
-            total: cur.totalPrice,
-            orderQuantity: 1,
-            itemQuantity: formatQuantity['item'],
-            data: [
-              {
-                items: cur.items,
-                createdAt: cur.createdAt,
-                total: cur.totalPrice,
-                mobile: cur.mobileNoThreeDigits,
-              },
-            ],
-          },
-        ]
+        init[cur.status].push({
+          type: paymentCode,
+          name: cur.paymentType?.name ?? '未知',
+          color: cur.paymentType?.color ?? null,
+          total: cur.totalPrice,
+          orderQuantity: 1,
+          itemQuantity: formatQuantity.item,
+          data: [
+            {
+              items: cur.items,
+              createdAt: cur.createdAt,
+              total: cur.totalPrice,
+              mobile: cur.mobileNoThreeDigits,
+            },
+          ],
+        })
       }
+
       return init
     },
     {
-      completed: [
-        {
-          type: 'cash',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-        {
-          type: 'Line Pay',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-      ],
-      readyForPickup: [
-        {
-          type: 'cash',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-        {
-          type: 'Line Pay',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-      ],
-      pending: [
-        {
-          type: 'cash',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-        {
-          type: 'Line Pay',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-      ],
-      cancelled: [
-        {
-          type: 'cash',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-        {
-          type: 'Line Pay',
-          orderQuantity: 0,
-          itemQuantity: 0,
-
-          total: 0,
-          data: [],
-        },
-        {
-          type: null,
-          orderQuantity: 0,
-          itemQuantity: 0,
-          total: 0,
-          data: [],
-        },
-      ],
+      completed: [],
+      readyForPickup: [],
+      pending: [],
+      cancelled: [],
     }
   )
 
@@ -148,19 +73,17 @@ const computedTotalProductItem = (data) => {
             const matchItem = computedAry.find(
               (accItem) => accItem.id === item.extraItem._id
             )
+
             if (matchItem) {
               matchItem.quantity += item.quantity
             } else {
-              computedAry = [
-                ...computedAry,
-                {
-                  id: item.extraItem._id,
-                  type: item.extraItem?.type,
-                  category: item.extraItem.category?.name,
-                  name: `${item.extraItem.name} (${item.extraItem.description})`,
-                  quantity: item.quantity,
-                },
-              ]
+              computedAry.push({
+                id: item.extraItem._id,
+                type: item.extraItem?.type,
+                category: item.extraItem.category?.name,
+                name: `${item.extraItem.name} (${item.extraItem.description})`,
+                quantity: item.quantity,
+              })
             }
           })
         }
@@ -169,19 +92,17 @@ const computedTotalProductItem = (data) => {
         const matchProductItem = computedAry.find(
           (accItem) => accItem.id === itemsItem.product._id
         )
+
         if (matchProductItem) {
           matchProductItem.quantity += itemsItem.quantity
         } else {
-          computedAry = [
-            ...computedAry,
-            {
-              id: itemsItem.product._id,
-              type: itemsItem.product?.type,
-              category: itemsItem.product.category?.name,
-              name: itemsItem.product.name,
-              quantity: itemsItem.quantity,
-            },
-          ]
+          computedAry.push({
+            id: itemsItem.product._id,
+            type: itemsItem.product?.type,
+            category: itemsItem.product.category?.name,
+            name: itemsItem.product.name,
+            quantity: itemsItem.quantity,
+          })
         }
       })
     })
