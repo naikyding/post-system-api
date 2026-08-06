@@ -47,13 +47,13 @@ const customerSchema = mongoose.Schema(
       type: String,
       default: '',
     },
-    agents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Agent',
-      },
-    ],
+    // 所屬店家
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: [true, 'agent 是必填項目'],
+      index: true,
+    },
   },
   {
     versionKey: false,

@@ -44,14 +44,6 @@ const productsSchema = new mongoose.Schema(
       required: [true, 'price 是必填項目'],
     },
 
-    agents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Agent',
-      },
-    ],
-
     agent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Agent',
