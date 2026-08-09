@@ -21,13 +21,6 @@ const extrasSchema = new mongoose.Schema(
       required: [true, 'agent 是必填項目'],
       index: true,
     },
-    agents: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'agents 是必填項目'],
-        ref: 'Agent',
-      },
-    ],
 
     // 新分類
     category: {

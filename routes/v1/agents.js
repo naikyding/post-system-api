@@ -11,6 +11,7 @@ const {
   createAgent,
   deleteAgent,
   updateAgent,
+  createAgentBranch,
 } = require('../../controllers/agents.controller')
 
 router.get('/', auth, getAgents)
@@ -24,5 +25,13 @@ router.delete(
 )
 
 router.patch('/:id', auth, validation.updateAgent, validateHandler, updateAgent)
+
+router.post(
+  '/:id/branches',
+  auth,
+  validation.createAgentBranch,
+  validateHandler,
+  createAgentBranch
+)
 
 module.exports = router

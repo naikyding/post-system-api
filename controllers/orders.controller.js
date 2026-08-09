@@ -98,7 +98,7 @@ const validation = {
               $in: extraItemsId,
             },
           })
-          .select('-agents -createdAt -updatedAt')
+          .select('-createdAt -updatedAt')
           .exec()
 
         extras.forEach((extraItemContent) => {
@@ -571,7 +571,7 @@ const validation = {
               $in: extraItemsId,
             },
           })
-          .select('-agents -createdAt -updatedAt')
+          .select('-createdAt -updatedAt')
           .exec()
 
         extras.forEach((extraItemContent) => {
@@ -1055,7 +1055,7 @@ const createOrder = catchAsync(async (req, res) => {
   await ordersModel.populate(createdOrder, {
     path: 'items.extras.extraItem',
     model: extrasModel,
-    select: '-agents -createAt -createdAt -updatedAt',
+    select: '-createAt -createdAt -updatedAt',
   })
 
   await ordersModel.populate(createdOrder, {

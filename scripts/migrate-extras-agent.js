@@ -51,4 +51,31 @@ async function migrate() {
   }
 }
 
-migrate()
+// migrate()
+
+async function check() {
+  await mongoose.connect(databaseUrl)
+  const missingAgent = await Extra.countDocuments({
+    $or: [{ agent: { $exists: false } }, { agent: null }],
+  })
+
+  if (missingAgent > 0) {
+    console.log(`❌ 還有 ${missingAgent} 筆沒有 agent，取消刪除 agents`)
+    process.exit(1)
+  }
+
+  const result = await Extra.updateMany(
+    {
+      agents: { $exists: true },
+    },
+    {
+      $unset: {
+        agents: '',
+      },
+    }
+  )
+
+  console.log(`✅ 已移除 ${result.modifiedCount} 筆 agents 欄位`)
+}
+
+check()
