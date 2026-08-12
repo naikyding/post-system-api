@@ -800,28 +800,32 @@ const validation = {
   ],
 
   getWaitingListFromOrderList: [
-    header('mc-agent-id')
-      .exists() // 欄位存在
-      .withMessage('欄位 `agent` 必填')
+    query('agent')
+      .exists()
+      .withMessage('query `agent` 必填')
       .bail()
-      .isMongoId() // 是否為 mongo id
+      .isMongoId()
       .withMessage('無效的 `agent id`')
       .bail()
       .custom(async (agentId) => {
         const matchAgent = await agentsModel.findById(agentId)
-        if (!matchAgent) throw new Error(`無此商家!`)
+
+        if (!matchAgent) {
+          throw new Error(`無此商家!`)
+        }
       }),
 
     query('from')
       .optional()
       .isISO8601()
       .withMessage('query `from` 日期格式錯誤')
-      .toDate(), // 驗證後轉為 Date 物件
+      .toDate(),
+
     query('to')
       .optional()
       .isISO8601()
       .withMessage('query `to` 日期格式錯誤')
-      .toDate(), // 驗證後轉為 Date 物件
+      .toDate(),
   ],
 }
 
@@ -1083,15 +1087,55 @@ const deleteOrder = getOrderList
 const deleteOrderItem = getOrderList
 
 const getWaitingListFromOrderList = catchAsync(async (req, res) => {
-  const { mobile, from, to } = req.query
-  const agentId = req.headers['mc-agent-id']
+  // ========================================
+  // 製作設定
+  // ========================================
+
+  // 同時可以使用幾爐製作
+  // 例如 3 = 同時 3 爐
+  const PRODUCTION_CAPACITY = 3
+
+  // 每一輪製作需要幾分鐘
+  const PRODUCTION_TIME = 5
+
+  // ========================================
+  // 人工操作緩衝時間
+  // ========================================
+  function getBufferTime(itemsQuantity) {
+    // 1～9片：+5分鐘
+    if (itemsQuantity <= 9) {
+      return 5
+    }
+
+    // 10片以上：+10分鐘
+    return 10
+  }
+
+  // ========================================
+  // Query Parameters
+  //
+  // ?agent=xxxxx
+  // ?agent=xxxxx&mobile=123
+  // ========================================
+  const { mobile, from, to, agent } = req.query
+
+  const agentId = agent
+
+  // ========================================
+  // MongoDB 查詢條件
+  // ========================================
   const filter = {
     // status: 'pending'
   }
 
-  // if (mobile) filter['mobileNoThreeDigits'] = mobile
-  if (agentId) filter['agent'] = agentId
+  // Agent 篩選
+  if (agentId) {
+    filter.agent = agentId
+  }
 
+  // ========================================
+  // 日期
+  // ========================================
   const formatFrom = from || new Date()
   const formatTo = to || new Date()
 
@@ -1099,18 +1143,38 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
   formatFrom.setHours(0 - 8, 0, 0, 0)
   formatTo.setHours(23 - 8, 59, 59, 999)
 
-  filter['createdAt'] = {
+  filter.createdAt = {
     $gte: formatFrom,
     $lte: formatTo,
   }
+
+  // ========================================
+  // 取得訂單
+  // ========================================
   const orderList = await ordersModel.find(filter).populate({
     path: 'items',
-    populate: [{ path: 'product', select: 'name type image price createdAt' }],
+    populate: [
+      {
+        path: 'product',
+        select: 'name type image price createdAt category',
+
+        // Product.category 是 ObjectId
+        // 取得 ProductCategory
+        populate: {
+          path: 'category',
+          select: 'name slug',
+        },
+      },
+    ],
   })
 
+  // ========================================
+  // 依照訂單狀態分類
+  // ========================================
   const orderListAll = orderList.reduce(
     (acc, cur) => {
       acc[cur.status] = [...acc[cur.status], cur]
+
       return acc
     },
     {
@@ -1121,113 +1185,277 @@ const getWaitingListFromOrderList = catchAsync(async (req, res) => {
     }
   )
 
-  // 運算時間方法
-  function pendingComputed(itemsQuantity) {
-    // 三個生產單位，可同時生產
-    const computedQuantity =
-      itemsQuantity < 3
-        ? itemsQuantity
-        : itemsQuantity < 6
-        ? Math.ceil(itemsQuantity / 3)
-        : (itemsQuantity - 1) / 3
+  // ========================================
+  // 計算「指定訂單」等待時間
+  //
+  // beforeItemsQuantity：
+  // 這張訂單前面還有幾片
+  //
+  // itemsQuantity：
+  // 這張訂單自己有幾片
+  //
+  // 例如：
+  //
+  // 前面 0 片
+  // 自己 3 片
+  //
+  // → waiting items = 0
+  // → 第一輪正在製作
+  // → 5 分鐘完成
+  //
+  // 前面 3 片
+  // 自己 4 片
+  //
+  // → waiting items = 3
+  // → 前面 3 片先完成
+  // → 自己從第二輪開始
+  // ========================================
+  function pendingComputed(beforeItemsQuantity, itemsQuantity) {
+    // ========================================
+    // 這張訂單第一片最快在哪一輪
+    // ========================================
+    const minRound = Math.floor(beforeItemsQuantity / PRODUCTION_CAPACITY) + 1
+
+    // ========================================
+    // 這張訂單最後一片在哪一輪完成
+    // ========================================
+    const maxRound = Math.ceil(
+      (beforeItemsQuantity + itemsQuantity) / PRODUCTION_CAPACITY
+    )
+
+    // ========================================
+    // 第一片最快完成時間
+    // ========================================
+    const min = minRound * PRODUCTION_TIME
+
+    // ========================================
+    // 最後一片理論完成時間
+    // ========================================
+    const theoreticalMax = maxRound * PRODUCTION_TIME
+
+    // ========================================
+    // 加人工操作緩衝
+    // ========================================
+    const max = theoreticalMax + getBufferTime(itemsQuantity)
 
     return {
-      itemsQuantity: itemsQuantity, // 總片數
-      // 等待時間
+      // ========================================
+      // 「等待中的片數」
+      //
+      // 注意：
+      // 這裡不是自己的訂單數量
+      //
+      // 如果客人排第一位：
+      // beforeItemsQuantity = 0
+      // → itemsQuantity = 0
+      //
+      // 代表自己的訂單已經正在製作
+      // ========================================
+      itemsQuantity: beforeItemsQuantity,
+
       range: {
-        min: Math.round(computedQuantity * 5), // 最少一單位 5 分鐘
-        max: Math.round(computedQuantity * 7), // 最多一單位 7 分鐘
+        min,
+        max,
       },
     }
   }
 
-  const bagIds = [
-    '6a13f75046635fb4a4232154', // 大袋
-    '6a13f73c46635fb4a4232148', // 小袋
-  ]
+  // ========================================
+  // 計算目前所有 Pending
+  //
+  // 沒有輸入手機末三碼時使用
+  //
+  // 這裡計算的是：
+  // 「目前所有 Pending 全部完成」
+  // ========================================
+  function pendingTotalComputed(itemsQuantity) {
+    // 沒有待製作
+    if (itemsQuantity <= 0) {
+      return {
+        itemsQuantity: 0,
 
-  // 預設 (沒有手機號碼)
-  if (!mobile)
+        range: {
+          min: 0,
+          max: 0,
+        },
+      }
+    }
+
+    // ========================================
+    // 全部需要幾輪
+    // ========================================
+    const totalRound = Math.ceil(itemsQuantity / PRODUCTION_CAPACITY)
+
+    // ========================================
+    // 理論全部完成時間
+    // ========================================
+    const theoreticalTime = totalRound * PRODUCTION_TIME
+
+    // ========================================
+    // 人工緩衝
+    // ========================================
+    const max = theoreticalTime + getBufferTime(itemsQuantity)
+
+    return {
+      // 目前總共有幾片
+      itemsQuantity,
+
+      range: {
+        min: theoreticalTime,
+        max,
+      },
+    }
+  }
+
+  // ========================================
+  // 沒有輸入手機末三碼
+  //
+  // 計算目前所有 Pending
+  // 全部完成需要多久
+  // ========================================
+  if (!mobile) {
+    const totalItemsQuantity = orderListAll.pending.reduce(
+      (orderTotal, order) => {
+        const orderItemsQuantity = order.items.reduce((itemTotal, item) => {
+          // options 不計入製作數量
+          if (item.product?.category?.slug === 'options') {
+            return itemTotal
+          }
+
+          return itemTotal + item.quantity
+        }, 0)
+
+        return orderTotal + orderItemsQuantity
+      },
+      0
+    )
+
     return successResponse({
       res,
+
       data: {
         pending: [
           {
             content: null,
-            ...pendingComputed(
-              orderListAll['pending'].reduce((acc, cur) => {
-                return (acc += cur.items.reduce((acc, cur) => {
-                  if (!bagIds.includes(cur.product._id.toString()))
-                    return (acc += cur.quantity)
-                  return acc
-                }, 0))
-              }, 0)
-            ),
+
+            ...pendingTotalComputed(totalItemsQuantity),
           },
         ],
       },
     })
+  }
 
-  // 有手機號
+  // ========================================
+  // 有輸入手機末三碼
+  // ========================================
+
+  // Pending
   const matchInPendingList = orderListAll.pending.filter(
     (item) => item.mobileNoThreeDigits === mobile
   )
 
+  // Ready For Pickup
   const matchInReadyForPickupList = orderListAll.readyForPickup.filter(
     (item) => item.mobileNoThreeDigits === mobile
   )
+
+  // Completed
   const matchInCompletedList = orderListAll.completed.filter(
     (item) => item.mobileNoThreeDigits === mobile
   )
 
-  // -- 沒資料
+  // ========================================
+  // 查無此訂單
+  // ========================================
   if (
     matchInPendingList.length < 1 &&
     matchInCompletedList.length < 1 &&
     matchInReadyForPickupList.length < 1
-  )
+  ) {
     return successResponse({
       res,
       data: '查無此訂單',
     })
+  }
 
-  // -- 有資料
-
-  // 從清單比對手機
+  // ========================================
+  // 從 Pending 清單比對手機
+  // ========================================
   function mappingListByMobile(mobile, list) {
     let waiting = {
+      // 前面有幾筆訂單
       listQuantity: 0,
+
+      // 前面總共有幾片
       itemsQuantity: 0,
     }
 
     return list.reduce((acc, cur) => {
+      // ========================================
+      // 計算目前這張訂單的製作片數
+      //
+      // options 不計算
+      // ========================================
+      const currentItemsQuantity = cur.items.reduce((itemTotal, item) => {
+        if (item.product?.category?.slug === 'options') {
+          return itemTotal
+        }
+
+        return itemTotal + item.quantity
+      }, 0)
+
+      // ========================================
+      // 找到指定手機號碼
+      // ========================================
       if (mobile === cur.mobileNoThreeDigits) {
         acc = [
           ...acc,
           {
+            // 原始訂單
             content: cur,
-            listQuantity: waiting.listQuantity, // 訂單數
-            ...pendingComputed(waiting.itemsQuantity), // 片數、時間
+
+            // 前面有幾筆訂單
+            listQuantity: waiting.listQuantity,
+
+            // ========================================
+            // 等候時間
+            //
+            // waiting.itemsQuantity：
+            // 前面還有幾片
+            //
+            // currentItemsQuantity：
+            // 自己有幾片
+            // ========================================
+            ...pendingComputed(waiting.itemsQuantity, currentItemsQuantity),
           },
         ]
       }
 
+      // ========================================
+      // 累積前面訂單數量
+      // ========================================
       waiting.listQuantity++
-      waiting.itemsQuantity += cur.items.reduce((acc, cur) => {
-        if (!bagIds.includes(cur.product._id.toString()))
-          return (acc += cur.quantity)
-        return acc
-      }, 0)
+
+      // ========================================
+      // 累積前面製作片數
+      // ========================================
+      waiting.itemsQuantity += currentItemsQuantity
 
       return acc
     }, [])
   }
 
+  // ========================================
+  // 回傳
+  // ========================================
   return successResponse({
     res,
+
     data: {
-      pending: [...mappingListByMobile(mobile, orderListAll['pending'])],
+      pending: [...mappingListByMobile(mobile, orderListAll.pending)],
+
       completed: matchInCompletedList,
+
       readyForPickup: matchInReadyForPickupList,
     },
   })
