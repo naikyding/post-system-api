@@ -3,6 +3,7 @@
 {
   "name": "Node.js",
   "image": "node:22",
+  "forwardPorts": [3000],
   // Set *default* container specific settings.json values on container create.
   // Add the IDs of extensions you want installed when the container is created.
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
